@@ -43,7 +43,7 @@ final class FloatingBadge: NSPanel {
         didSet { badgeView.translucent = translucent }
     }
 
-    func update(state: CaffeinateState) {
+    func update(state: MatchaState) {
         badgeView.apply(state: state)
     }
 }
@@ -133,7 +133,7 @@ final class BadgeView: NSView {
         }
     }
 
-    func apply(state: CaffeinateState) {
+    func apply(state: MatchaState) {
         active = state.active
         if state.active, let end = state.endDate, let total = state.duration, total > 0 {
             timed = true

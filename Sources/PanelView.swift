@@ -23,7 +23,7 @@ final class PanelView: NSView {
 
     required init?(coder: NSCoder) { fatalError() }
 
-    func apply(state: CaffeinateState) {
+    func apply(state: MatchaState) {
         ring.active = state.active
         ring.accent = state.active ? Matcha.green : .controlAccentColor
         if state.active, let end = state.endDate, let total = state.duration, total > 0 {

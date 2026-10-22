@@ -14,12 +14,17 @@ swiftc -O Sources/*.swift \
     -o "$APP/Contents/MacOS/Matcha" \
     -framework AppKit \
     -framework IOKit \
-    -framework ServiceManagement
+    -framework ServiceManagement \
+    -framework UserNotifications
 
 mkdir -p "$APP/Contents/Resources"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 if [[ -f Resources/AppIcon.icns ]]; then
     cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+fi
+if [[ -f Tools/matchactl ]]; then
+    cp Tools/matchactl "$APP/Contents/Resources/matchactl"
+    chmod +x "$APP/Contents/Resources/matchactl"
 fi
 if ! codesign --force --sign - "$APP" 2>&1; then
     echo "warning: codesign failed, continuing (ad-hoc signature)" >&2

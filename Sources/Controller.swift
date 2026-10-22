@@ -1,8 +1,9 @@
 import AppKit
 import IOKit.pwr_mgt
 import ServiceManagement
+import UserNotifications
 
-final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuItemValidation {
+final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuItemValidation, UNUserNotificationCenterDelegate {
 
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
@@ -10,6 +11,9 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private var popoverPanel: PanelView?
     private var windowPanel: PanelView?
     private var badge: FloatingBadge?
+    private let triggers = TriggerMonitor()
+    private var triggerBusy = false
+    private var pendingShowWorkItem: DispatchWorkItem?
 
     private var active = false
     private var endDate: Date?
@@ -39,11 +43,30 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             UserDefaults.standard.set("\(origin.x),\(origin.y)", forKey: Pref.badgeOrigin)
         }
 
+        triggers.onBusyChanged = { [weak self] busy in
+            self?.triggerBusy = busy
+            self?.refreshAll()
+        }
+        triggers.onAwayWhileBusy = { [weak self] in self?.offerKeepAwake() }
+        setupNotifications()
+
         createWindow()
         applyPreferences()
+        applyTriggers()
         refreshAll()
-        showWindow()
-        NSApp.activate(ignoringOtherApps: true)
+
+        let show = DispatchWorkItem { [weak self] in
+            self?.showWindow()
+            NSApp.activate(ignoringOtherApps: true)
+        }
+        pendingShowWorkItem = show
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: show)
+    }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        pendingShowWorkItem?.cancel()
+        pendingShowWorkItem = nil
+        urls.forEach(handle)
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -52,6 +75,136 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     }
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool { true }
+
+    // MARK: - Automation (URL scheme + CLI)
+
+    private func handle(_ url: URL) {
+        guard url.scheme?.lowercased() == "matcha" else { return }
+        let command = url.host?.lowercased() ?? ""
+        let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+
+        func requestedTime() -> TimeInterval? {
+            func value(_ name: String) -> Double? {
+                items.first(where: { $0.name == name })?.value.flatMap(Double.init)
+            }
+            if let hours = value("hours") { return hours * 3600 }
+            if let minutes = value("minutes") { return minutes * 60 }
+            if let seconds = value("seconds") { return seconds }
+            if let raw = items.first(where: { $0.name == "duration" })?.value {
+                return Fmt.parseDuration(raw)
+            }
+            return nil
+        }
+
+        switch command {
+        case "on":
+            start(duration: requestedTime())
+        case "off":
+            stop()
+        case "toggle":
+            toggleActive()
+        case "extend":
+            let seconds = requestedTime() ?? 3600
+            if active, endDate != nil {
+                endDate = endDate!.addingTimeInterval(seconds)
+                duration = duration.map { $0 + seconds }
+                refreshAll()
+            } else {
+                start(duration: seconds)
+            }
+        default:
+            break
+        }
+    }
+
+    // MARK: - Notifications
+
+    private func setupNotifications() {
+        let center = UNUserNotificationCenter.current()
+        center.delegate = self
+
+        let keep = UNNotificationAction(identifier: "KEEP_AWAKE", title: "Keep Awake", options: [.foreground])
+        let skip = UNNotificationAction(identifier: "NOT_NOW", title: "Not Now", options: [])
+        let category = UNNotificationCategory(
+            identifier: "AWAY",
+            actions: [keep, skip],
+            intentIdentifiers: [],
+            options: []
+        )
+        center.setNotificationCategories([category])
+        center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    private func offerKeepAwake() {
+        guard !active else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "Still working?"
+        content.body = "A build or coding task is running and you've stepped away. Keep your Mac awake?"
+        content.categoryIdentifier = "AWAY"
+        content.sound = .default
+        let request = UNNotificationRequest(identifier: "matcha.away", content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        if response.actionIdentifier == "KEEP_AWAKE"
+            || response.actionIdentifier == UNNotificationDefaultActionIdentifier {
+            start(duration: nil)
+            NSApp.activate(ignoringOtherApps: true)
+            showWindow()
+        }
+        completionHandler()
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
+    }
+
+    private func applyTriggers() {
+        if UserDefaults.standard.bool(forKey: Pref.autoTriggers) {
+            triggers.start()
+        } else {
+            triggers.stop()
+            triggerBusy = false
+        }
+    }
+
+    @objc private func toggleAutoTriggers(_ sender: NSMenuItem) {
+        let value = !UserDefaults.standard.bool(forKey: Pref.autoTriggers)
+        UserDefaults.standard.set(value, forKey: Pref.autoTriggers)
+        applyTriggers()
+    }
+
+    // MARK: - Status file (read by the matchactl CLI)
+
+    private func writeStatus() {
+        let directory = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Matcha", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+        let status: [String: Any] = [
+            "active": active,
+            "remaining": endDate.map { max(0, Int($0.timeIntervalSinceNow.rounded())) } ?? -1,
+            "duration": duration.map { Int($0) } ?? -1,
+            "trigger": triggerBusy,
+        ]
+
+        guard let data = try? PropertyListSerialization.data(
+            fromPropertyList: status,
+            format: .xml,
+            options: 0
+        ) else { return }
+        try? data.write(to: directory.appendingPathComponent("status.plist"))
+    }
 
     private func wire(_ panel: PanelView) {
         panel.onToggle = { [weak self] in self?.toggleActive() }
@@ -240,6 +393,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         }
 
         menu.addItem(toggleItem("Keep Display On", Pref.keepDisplayOn, #selector(toggleKeepDisplay(_:))))
+        menu.addItem(toggleItem("Auto-Keep Awake for Code", Pref.autoTriggers, #selector(toggleAutoTriggers(_:))))
         menu.addItem(toggleItem("Show in Menu Bar", Pref.showMenuBarIcon, #selector(toggleMenuBarIcon(_:))))
         menu.addItem(toggleItem("Show Floating Indicator", Pref.showFloatingIndicator, #selector(toggleFloatingIndicator(_:))))
         menu.addItem(toggleItem("Translucent Indicator", Pref.translucentIndicator, #selector(toggleTranslucent(_:))))
@@ -459,7 +613,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     }
 
     private func refreshAll() {
-        let state = CaffeinateState(active: active, endDate: endDate, duration: duration)
+        let state = MatchaState(active: active, endDate: endDate, duration: duration)
         popoverPanel?.apply(state: state)
         windowPanel?.apply(state: state)
         badge?.translucent = UserDefaults.standard.bool(forKey: Pref.translucentIndicator)
@@ -473,6 +627,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         }
 
         updateStatusItem()
+        writeStatus()
     }
 
     private func showBadgeIfNeeded() {
@@ -504,7 +659,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
                 ? ["cup.and.saucer.fill", "cup.and.saucer", "mug.fill", "mug"]
                 : ["cup.and.saucer", "mug"]
         )
-        button.contentTintColor = active ? .controlAccentColor : nil
+        button.contentTintColor = active ? Matcha.green : nil
         if active, let end = endDate {
             button.title = " " + Fmt.clock(end.timeIntervalSinceNow)
         } else {
