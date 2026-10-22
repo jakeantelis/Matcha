@@ -1,6 +1,6 @@
 import AppKit
 
-struct CaffeinateState {
+struct MatchaState {
     var active: Bool = false
     var endDate: Date?
     var duration: TimeInterval?
@@ -22,6 +22,7 @@ enum Pref {
     static let keepDisplayOn = "keepDisplayOn"
     static let appearance = "appearance"
     static let badgeOrigin = "badgeOrigin"
+    static let autoTriggers = "autoTriggers"
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -30,6 +31,7 @@ enum Pref {
             translucentIndicator: true,
             keepDisplayOn: false,
             appearance: "system",
+            autoTriggers: true,
         ])
     }
 }
@@ -53,35 +55,70 @@ enum Fmt {
     }
 
     static func parseDuration(_ text: String) -> TimeInterval? {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return nil }
+
+        let s = trimmed.lowercased()
         var total: TimeInterval = 0
-        let lower = text.lowercased()
-        let scanner = Scanner(string: lower)
-        while !scanner.isAtEnd {
-            if let num = scanner.scanDouble() {
-                if scanner.scanString("d") != nil || scanner.scanString("day") != nil || scanner.scanString("days") != nil {
-                    total += num * 86400
-                } else if scanner.scanString("h") != nil || scanner.scanString("hr") != nil || scanner.scanString("hrs") != nil || scanner.scanString("hour") != nil || scanner.scanString("hours") != nil {
-                    total += num * 3600
-                } else if scanner.scanString("m") != nil || scanner.scanString("min") != nil || scanner.scanString("mins") != nil || scanner.scanString("minute") != nil || scanner.scanString("minutes") != nil {
-                    total += num * 60
-                } else if scanner.scanString("s") != nil || scanner.scanString("sec") != nil || scanner.scanString("secs") != nil || scanner.scanString("second") != nil || scanner.scanString("seconds") != nil {
-                    total += num
-                } else {
-                    total += num * 3600
-                }
-                continue
+        var pos = s.startIndex
+
+        while pos < s.endIndex {
+            // skip whitespace between tokens
+            while pos < s.endIndex && s[pos].isWhitespace {
+                pos = s.index(after: pos)
             }
-            _ = scanner.scanCharacter()
+            guard pos < s.endIndex else { break }
+
+            // parse a number
+            let numberStart = pos
+            var sawDot = false
+            while pos < s.endIndex {
+                let c = s[pos]
+                if c.isNumber {
+                    pos = s.index(after: pos)
+                } else if c == "." && !sawDot {
+                    sawDot = true
+                    pos = s.index(after: pos)
+                } else {
+                    break
+                }
+            }
+            guard numberStart != pos, let value = Double(s[numberStart..<pos]) else {
+                return nil
+            }
+
+            // parse optional unit word
+            let unitStart = pos
+            while pos < s.endIndex && s[pos].isLetter {
+                pos = s.index(after: pos)
+            }
+            let unit = String(s[unitStart..<pos])
+
+            switch unit {
+            case "d", "day", "days":
+                total += value * 86400
+            case "h", "hr", "hrs", "hour", "hours":
+                total += value * 3600
+            case "m", "min", "mins", "minute", "minutes":
+                total += value * 60
+            case "s", "sec", "secs", "second", "seconds":
+                total += value
+            case "":
+                total += value * 3600
+            default:
+                return nil
+            }
         }
+
         return total > 0 ? total : nil
     }
 
-    static func remainingText(_ state: CaffeinateState) -> String {
+    static func remainingText(_ state: MatchaState) -> String {
         guard let end = state.endDate else { return "Until you stop" }
         return "\(clock(end.timeIntervalSinceNow)) left \u{00B7} ends \(clockTime.string(from: end))"
     }
 
-    static func remainingShort(_ state: CaffeinateState) -> String {
+    static func remainingShort(_ state: MatchaState) -> String {
         guard let end = state.endDate else { return "On" }
         return clock(end.timeIntervalSinceNow)
     }
@@ -89,7 +126,7 @@ enum Fmt {
 
 func symbolImage(_ names: [String]) -> NSImage? {
     for name in names {
-        if let image = NSImage(systemSymbolName: name, accessibilityDescription: "Caffeinate") {
+        if let image = NSImage(systemSymbolName: name, accessibilityDescription: "Matcha") {
             return image
         }
     }

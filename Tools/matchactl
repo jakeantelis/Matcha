@@ -1,0 +1,52 @@
+#!/bin/zsh
+set -u
+
+STATUS_FILE="$HOME/Library/Application Support/Matcha/status.plist"
+
+usage() {
+    echo "usage: matchactl <on [hours] | off | toggle | extend <hours> | status>"
+}
+
+command="${1:-status}"
+
+case "$command" in
+    on)
+        if [[ -n "${2:-}" ]]; then
+            open -g "matcha://on?hours=$2"
+        else
+            open -g "matcha://on"
+        fi
+        ;;
+    off)
+        open -g "matcha://off"
+        ;;
+    toggle)
+        open -g "matcha://toggle"
+        ;;
+    extend)
+        open -g "matcha://extend?hours=${2:-1}"
+        ;;
+    status)
+        if [[ ! -f "$STATUS_FILE" ]]; then
+            echo "Matcha status unavailable (app has not run yet)"
+            exit 1
+        fi
+        active=$(plutil -extract active raw -o - "$STATUS_FILE" 2>/dev/null || echo false)
+        remaining=$(plutil -extract remaining raw -o - "$STATUS_FILE" 2>/dev/null || echo -1)
+        trigger=$(plutil -extract trigger raw -o - "$STATUS_FILE" 2>/dev/null || echo false)
+        if [[ "$active" == "true" ]]; then
+            if [[ "$remaining" == "-1" ]]; then
+                echo "on (until stopped)"
+            else
+                echo "on (${remaining}s left)"
+            fi
+        else
+            echo "off"
+        fi
+        echo "coding activity: $trigger"
+        ;;
+    *)
+        usage
+        exit 2
+        ;;
+esac

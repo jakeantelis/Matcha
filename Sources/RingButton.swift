@@ -8,6 +8,7 @@ final class RingButton: NSView {
 
     private var hovering = false
     private var tracking: NSTrackingArea?
+    private var cursorPushed = false
 
     override var intrinsicContentSize: NSSize { NSSize(width: 128, height: 128) }
 
@@ -27,13 +28,23 @@ final class RingButton: NSView {
     override func mouseEntered(with event: NSEvent) {
         hovering = true
         needsDisplay = true
-        NSCursor.pointingHand.push()
+        if !cursorPushed {
+            NSCursor.pointingHand.push()
+            cursorPushed = true
+        }
     }
 
     override func mouseExited(with event: NSEvent) {
         hovering = false
         needsDisplay = true
-        NSCursor.pop()
+        if cursorPushed {
+            NSCursor.pop()
+            cursorPushed = false
+        }
+    }
+
+    deinit {
+        if cursorPushed { NSCursor.pop() }
     }
 
     override func mouseUp(with event: NSEvent) {

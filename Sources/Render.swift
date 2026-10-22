@@ -6,7 +6,7 @@ enum Render {
         NSApp.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
 
         let panel = PanelView()
-        var state = CaffeinateState()
+        var state = MatchaState()
         state.active = active
         if active {
             state.duration = 7200
@@ -47,7 +47,7 @@ enum Render {
         let side: CGFloat = 78
         let badge = BadgeView(frame: NSRect(x: 0, y: 0, width: side, height: side))
         badge.translucent = translucent
-        var state = CaffeinateState()
+        var state = MatchaState()
         state.active = active
         if active {
             state.duration = 7200
