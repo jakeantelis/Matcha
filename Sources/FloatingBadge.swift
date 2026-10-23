@@ -30,7 +30,7 @@ final class FloatingBadge: NSPanel {
         level = .floating
         isOpaque = false
         backgroundColor = .clear
-        hasShadow = true
+        hasShadow = false
         hidesOnDeactivate = false
         isMovableByWindowBackground = true
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -152,8 +152,16 @@ final class BadgeView: NSView {
 
         let fillAlpha: CGFloat = (translucent ? 0.55 : 0.97) + (hovering ? 0.08 : 0)
         let path = NSBezierPath(ovalIn: circle)
+
+        NSGraphicsContext.current?.saveGraphicsState()
+        let shadow = NSShadow()
+        shadow.shadowColor = NSColor.black.withAlphaComponent(0.25)
+        shadow.shadowBlurRadius = 8 * scale
+        shadow.shadowOffset = NSSize(width: 0, height: -3 * scale)
+        shadow.set()
         NSColor.controlBackgroundColor.withAlphaComponent(fillAlpha).setFill()
         path.fill()
+        NSGraphicsContext.current?.restoreGraphicsState()
 
         // Active breathing glow, matching the main window's warm halo
         if active {

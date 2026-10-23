@@ -107,16 +107,14 @@ final class RingButton: NSView {
             halo.stroke()
         }
 
-        let track = NSBezierPath(ovalIn: ringRect)
+                let track = NSBezierPath(ovalIn: ringRect)
         track.lineWidth = lineWidth
         if active {
             accent.withAlphaComponent(0.16).setStroke()
         } else if hovering {
             accent.withAlphaComponent(0.35).setStroke()
         } else {
-            NSColor.tertiaryLabelColor.setStroke()
-            var dash: [CGFloat] = [1.5, 5]
-            track.setLineDash(&dash, count: dash.count, phase: 0)
+            NSColor.separatorColor.withAlphaComponent(0.6).setStroke()
         }
         track.stroke()
 
