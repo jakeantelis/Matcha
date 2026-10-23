@@ -14,6 +14,21 @@ agents can report long jobs instead of holding your Mac awake forever.
 
 ## Install
 
+One command:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/install.sh | sh
+```
+
+This downloads the latest release, verifies its SHA-256, installs it to
+`/Applications`, opens it, and configures any coding agents it finds. Rerun the
+same command to update. Skip the agent setup with `| sh -s -- --no-agents`.
+
+Requires macOS 11 or later. Universal binary for Apple silicon and Intel.
+
+<details>
+<summary>Manual install</summary>
+
 ```sh
 curl -fL https://github.com/jakeantelis/Matcha/releases/latest/download/Matcha.zip -o /tmp/Matcha.zip
 unzip -qo /tmp/Matcha.zip -d /Applications
@@ -21,12 +36,11 @@ xattr -dr com.apple.quarantine /Applications/Matcha.app 2>/dev/null || true
 open /Applications/Matcha.app
 ```
 
-Requires macOS 11 or later. Universal binary for Apple silicon and Intel.
-
 The app is ad-hoc signed, not notarized. If Gatekeeper warns on first launch,
 right-click the app and choose **Open**, or allow it under
-**System Settings → Privacy & Security → Open Anyway**. Building from source
-avoids the warning.
+**System Settings → Privacy & Security → Open Anyway**.
+
+</details>
 
 ## Use
 
@@ -87,17 +101,29 @@ open -g "matcha://toggle"
 
 ## Agents
 
-The agent kit teaches coding agents when to start and stop a session, leaving
-sessions you started yourself untouched:
+The installer configures every agent it can find, using a managed block that is
+safe to re-run:
+
+| Agent | What it configures |
+| --- | --- |
+| Claude Code | `~/.claude/skills/matcha-keep-awake/SKILL.md` |
+| opencode | `~/.config/opencode/skills/matcha-keep-awake/SKILL.md` |
+| Codex CLI | `~/.codex/AGENTS.md` |
+| Gemini CLI | `~/.gemini/GEMINI.md` |
+| Windsurf | `~/.codeium/windsurf/memories/global_rules.md` |
+
+Cursor and Aider load rules per project. Run this inside the repo:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/install-agent-kit.sh | sh
+curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/install-agent-kit.sh | sh -s -- --project
 ```
 
-It installs the `matcha-keep-awake` skill for **Claude Code** and **opencode**.
-For **Codex CLI**, **Gemini CLI**, **Cursor**, **Windsurf**, **Aider**, or any
-other agent, copy the small snippet in [`Agent/AGENTS.md`](Agent/AGENTS.md) into
-that agent's instructions file.
+That adds `.cursor/rules/matcha-keep-awake.mdc` and appends the snippet to
+`CONVENTIONS.md`. For Zed or any other agent, paste
+[`Agent/instructions.md`](Agent/instructions.md) into its instructions.
+
+Agents start a session before long work and stop it afterwards, leaving any
+session you started yourself untouched.
 
 ## Build from source
 

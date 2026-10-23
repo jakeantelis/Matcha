@@ -19,27 +19,30 @@ screen, with first-class automation for scripts and AI agents.
 ### Install
 
 ```sh
-curl -fL https://github.com/jakeantelis/Matcha/releases/latest/download/Matcha.zip -o /tmp/Matcha.zip
-unzip -qo /tmp/Matcha.zip -d /Applications
-xattr -dr com.apple.quarantine /Applications/Matcha.app 2>/dev/null || true
-open /Applications/Matcha.app
+curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/install.sh | sh
 ```
 
-The app is ad-hoc signed, not notarized. If Gatekeeper blocks the first launch,
+Downloads the latest release, verifies its SHA-256, installs it, opens the app,
+and configures detected coding agents. Rerun the same command to update; add
+`-s -- --no-agents` to skip agent setup.
+
+The app is ad-hoc signed, not notarized. If Gatekeeper blocks a manual install,
 right-click the app and choose **Open**, or allow it under
-**System Settings > Privacy & Security > Open Anyway**. Building from source
-avoids the warning entirely.
+**System Settings > Privacy & Security > Open Anyway**. The installer avoids
+that prompt automatically.
 
 ### Agent kit
 
+The installer configures Claude Code and opencode skills, plus instructions for
+Codex CLI, Gemini CLI, and Windsurf when those tools are present. Cursor and
+Aider use project rules:
+
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/install-agent-kit.sh | sh
+curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/install-agent-kit.sh | sh -s -- --project
 ```
 
-Installs the `matcha-keep-awake` skill for Claude Code and opencode. For Codex
-CLI, Gemini CLI, Cursor, Windsurf, Aider, or any other agent, copy the snippet
-from `Agent/AGENTS.md`. Agents start a session before long work and stop it
-afterwards, leaving sessions you started yourself untouched.
+Agents start a session before long work and stop it afterwards, leaving sessions
+you started yourself untouched.
 
 ### Requirements
 
