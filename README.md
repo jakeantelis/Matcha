@@ -30,6 +30,11 @@ Requires macOS 11 or later. Universal binary for Apple silicon and Intel.
 Allow notifications when macOS asks; that is how the five-minute warning and
 agent prompts reach you.
 
+**Not notarized.** Ad-hoc signed, not notarized by Apple. The one-command installer
+removes quarantine automatically. For manual downloads, right-click → Open or
+**System Settings → Privacy & Security → Open Anyway**. Notarization may come
+later if there's demand.
+
 <details>
 <summary>Manual install</summary>
 
@@ -52,7 +57,8 @@ Click the ring to start or stop. Pick a preset (2h, 4h, 8h, ∞) or type a
 duration such as `8`, `90m`, `2.5h`, `1d`, or `2h 30m`.
 
 - **Floating indicator** — drag it anywhere; click or right-click for quick
-  controls. Size it under **Indicator Size**.
+  controls. Size it under **Indicator Size**. Double-click when active adds
+  30 minutes, Option-click stops. Tags along across Spaces.
 - **Menu bar** — optional icon with the same controls, plus an optional live
   countdown (**Show Time in Menu Bar**).
 - **Ending warning** — five minutes before a session ends, Matcha offers
