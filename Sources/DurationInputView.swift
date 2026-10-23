@@ -7,6 +7,10 @@ final class DurationInputView: NSView, NSTextFieldDelegate {
     private let clockIcon = NSImageView()
     private let hintIcon = NSImageView()
     private var focused = false
+    private var invalid = false
+
+    private static let placeholder = "How many hours?"
+    private static let invalidPlaceholder = "Try 90m, 2h, or 1:30"
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -17,6 +21,18 @@ final class DurationInputView: NSView, NSTextFieldDelegate {
 
     func clear() {
         field.stringValue = ""
+        setInvalid(false)
+    }
+
+    func showError() {
+        setInvalid(true)
+    }
+
+    private func setInvalid(_ value: Bool) {
+        invalid = value
+        field.placeholderString = value ? Self.invalidPlaceholder : Self.placeholder
+        clockIcon.contentTintColor = value ? .systemRed : .secondaryLabelColor
+        needsDisplay = true
     }
 
     private func build() {
@@ -32,7 +48,7 @@ final class DurationInputView: NSView, NSTextFieldDelegate {
         field.isEditable = true
         field.backgroundColor = .clear
         field.font = NSFont.systemFont(ofSize: 11.5, weight: .medium)
-        field.placeholderString = "How many hours?"
+        field.placeholderString = Self.placeholder
         field.lineBreakMode = .byTruncatingTail
         field.target = self
         field.action = #selector(submit)
@@ -70,15 +86,20 @@ final class DurationInputView: NSView, NSTextFieldDelegate {
         let radius = rect.height / 2
         let path = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
 
-        if focused {
+        if invalid {
+            NSColor.systemRed.withAlphaComponent(0.12).setFill()
+        } else if focused {
             NSColor.controlAccentColor.withAlphaComponent(0.14).setFill()
         } else {
             NSColor.quaternaryLabelColor.setFill()
         }
         path.fill()
 
-        (focused ? NSColor.controlAccentColor : NSColor.separatorColor).setStroke()
-        path.lineWidth = focused ? 1.5 : 1
+        let strokeColor = invalid
+            ? NSColor.systemRed
+            : (focused ? NSColor.controlAccentColor : NSColor.separatorColor)
+        strokeColor.setStroke()
+        path.lineWidth = (focused || invalid) ? 1.5 : 1
         path.stroke()
     }
 
@@ -90,6 +111,10 @@ final class DurationInputView: NSView, NSTextFieldDelegate {
     func controlTextDidBeginEditing(_ obj: Notification) {
         focused = true
         needsDisplay = true
+    }
+
+    func controlTextDidChange(_ obj: Notification) {
+        if invalid { setInvalid(false) }
     }
 
     func controlTextDidEndEditing(_ obj: Notification) {

@@ -1,4 +1,43 @@
 import AppKit
+import IOKit.ps
+
+enum Battery {
+    struct Status {
+        let onBattery: Bool
+        let percent: Int
+    }
+
+    private static func internalBattery() -> [String: Any]? {
+        guard let blob = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+              let sources = IOPSCopyPowerSourcesList(blob)?.takeRetainedValue() as? [CFTypeRef]
+        else { return nil }
+
+        for source in sources {
+            guard let info = IOPSGetPowerSourceDescription(blob, source)?.takeUnretainedValue() as? [String: Any]
+            else { continue }
+            if let type = info[kIOPSTypeKey] as? String, type == kIOPSInternalBatteryType {
+                return info
+            }
+        }
+        return nil
+    }
+
+    static var hasBattery: Bool {
+        internalBattery() != nil
+    }
+
+    static func status() -> Status? {
+        guard let info = internalBattery() else { return nil }
+        let state = info[kIOPSPowerSourceStateKey] as? String ?? ""
+        let current = info[kIOPSCurrentCapacityKey] as? Int ?? 0
+        let maximum = info[kIOPSMaxCapacityKey] as? Int ?? 100
+        let percent = maximum > 0 ? Int((Double(current) / Double(maximum)) * 100) : current
+        return Status(
+            onBattery: state == kIOPSBatteryPowerValue,
+            percent: min(100, max(0, percent))
+        )
+    }
+}
 
 struct MatchaState {
     var active: Bool = false
@@ -24,6 +63,10 @@ enum Pref {
     static let appearance = "appearance"
     static let badgeOrigin = "badgeOrigin"
     static let badgeSize = "badgeSize"
+    static let batteryGuard = "batteryGuard"
+    static let sessionActive = "sessionActive"
+    static let sessionEnd = "sessionEnd"
+    static let sessionDuration = "sessionDuration"
     static let autoTriggers = "autoTriggers"
 
     static func registerDefaults() {
@@ -35,6 +78,7 @@ enum Pref {
             appearance: "system",
             autoTriggers: true,
             badgeSize: "medium",
+            batteryGuard: true,
         ])
     }
 }

@@ -23,8 +23,11 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private var displayAssertionID: IOPMAssertionID = 0
     private var displayKeepAlive: Timer?
     private var caffeinateProcess: Process?
+    private var batteryTimer: Timer?
 
     func applicationWillTerminate(_ notification: Notification) {
+        clearPersistedSession()
+        stopBatteryGuard()
         releaseAssertions()
     }
 
@@ -58,6 +61,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
 
         createWindow()
         applyPreferences()
+        restoreSession()
         applyTriggers()
         refreshAll()
 
@@ -114,6 +118,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             if active, endDate != nil {
                 endDate = endDate!.addingTimeInterval(seconds)
                 duration = duration.map { $0 + seconds }
+                persistSession()
                 refreshAll()
             } else {
                 start(duration: seconds)
@@ -187,6 +192,11 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         let value = !UserDefaults.standard.bool(forKey: Pref.autoTriggers)
         UserDefaults.standard.set(value, forKey: Pref.autoTriggers)
         applyTriggers()
+    }
+
+    @objc private func toggleBatteryGuard(_ sender: NSMenuItem) {
+        let value = !UserDefaults.standard.bool(forKey: Pref.batteryGuard)
+        UserDefaults.standard.set(value, forKey: Pref.batteryGuard)
     }
 
     // MARK: - Status file (read by the matchactl CLI)
@@ -400,6 +410,9 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
 
         menu.addItem(toggleItem("Keep Display On & Unlocked", Pref.keepDisplayOn, #selector(toggleKeepDisplay(_:))))
         menu.addItem(toggleItem("Auto-Keep Awake for Code", Pref.autoTriggers, #selector(toggleAutoTriggers(_:))))
+        if Battery.hasBattery {
+            menu.addItem(toggleItem("Low Battery Guard", Pref.batteryGuard, #selector(toggleBatteryGuard(_:))))
+        }
         menu.addItem(toggleItem("Show in Menu Bar", Pref.showMenuBarIcon, #selector(toggleMenuBarIcon(_:))))
         menu.addItem(toggleItem("Show Floating Indicator", Pref.showFloatingIndicator, #selector(toggleFloatingIndicator(_:))))
         menu.addItem(toggleItem("Translucent Indicator", Pref.translucentIndicator, #selector(toggleTranslucent(_:))))
@@ -475,6 +488,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         if active, endDate != nil {
             endDate = endDate!.addingTimeInterval(seconds)
             duration = duration.map { $0 + seconds }
+            persistSession()
             refreshAll()
         } else {
             start(duration: seconds)
@@ -590,10 +604,9 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         }
         duration = seconds
         endDate = seconds.map { Date().addingTimeInterval($0) }
-        ticker?.invalidate()
-        ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            self?.tick()
-        }
+        startTicker()
+        startBatteryGuard()
+        persistSession()
         refreshAll()
     }
 
@@ -606,7 +619,16 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         ticker = nil
         endDate = nil
         duration = nil
+        stopBatteryGuard()
+        clearPersistedSession()
         refreshAll()
+    }
+
+    private func startTicker() {
+        ticker?.invalidate()
+        ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            self?.tick()
+        }
     }
 
     private func tick() {
@@ -617,6 +639,88 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             return
         }
         refreshAll()
+    }
+
+    // MARK: - Session persistence
+
+    private func persistSession() {
+        let defaults = UserDefaults.standard
+        defaults.set(active, forKey: Pref.sessionActive)
+        defaults.set(endDate?.timeIntervalSince1970 ?? 0, forKey: Pref.sessionEnd)
+        defaults.set(duration ?? 0, forKey: Pref.sessionDuration)
+    }
+
+    private func clearPersistedSession() {
+        let defaults = UserDefaults.standard
+        defaults.set(false, forKey: Pref.sessionActive)
+        defaults.set(0.0, forKey: Pref.sessionEnd)
+        defaults.set(0.0, forKey: Pref.sessionDuration)
+    }
+
+    private func restoreSession() {
+        let defaults = UserDefaults.standard
+        guard defaults.bool(forKey: Pref.sessionActive) else { return }
+
+        let stamp = defaults.double(forKey: Pref.sessionEnd)
+        let savedDuration = defaults.double(forKey: Pref.sessionDuration)
+        if stamp > 0 {
+            let end = Date(timeIntervalSince1970: stamp)
+            guard end.timeIntervalSinceNow > 0 else {
+                clearPersistedSession()
+                return
+            }
+            endDate = end
+            duration = savedDuration > 0 ? savedDuration : end.timeIntervalSinceNow
+        } else {
+            endDate = nil
+            duration = nil
+        }
+
+        createAssertions()
+        guard assertionID != 0 else {
+            endDate = nil
+            duration = nil
+            clearPersistedSession()
+            return
+        }
+        active = true
+        startTicker()
+        startBatteryGuard()
+    }
+
+    // MARK: - Battery guard
+
+    private func startBatteryGuard() {
+        guard Battery.hasBattery, batteryTimer == nil else { return }
+        let timer = Timer(timeInterval: 30, repeats: true) { [weak self] _ in
+            self?.checkBattery()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        batteryTimer = timer
+    }
+
+    private func stopBatteryGuard() {
+        batteryTimer?.invalidate()
+        batteryTimer = nil
+    }
+
+    private func checkBattery() {
+        guard active,
+              UserDefaults.standard.bool(forKey: Pref.batteryGuard),
+              let status = Battery.status(),
+              status.onBattery,
+              status.percent > 0,
+              status.percent <= 20
+        else { return }
+
+        stop()
+        let content = UNMutableNotificationContent()
+        content.title = "Matcha stopped to save battery"
+        content.body = "Battery is at \(status.percent)%. Plug in and start a session when you're ready."
+        content.sound = .default
+        UNUserNotificationCenter.current().add(
+            UNNotificationRequest(identifier: "matcha.battery", content: content, trigger: nil)
+        )
     }
 
     private func createAssertions() {

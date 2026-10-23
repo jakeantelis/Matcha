@@ -78,6 +78,7 @@ final class PanelView: NSView {
             durationInput.clear()
             onCustomMinutes?(Int(seconds))
         } else {
+            durationInput.showError()
             NSSound.beep()
         }
     }
