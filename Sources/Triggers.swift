@@ -20,8 +20,9 @@ final class TriggerMonitor {
     private let awayCooldown: TimeInterval = 600
 
     private let watchedProcesses: Set<String> = [
-        "xcodebuild", "swift", "swiftc", "opencode", "claude", "codex",
-        "python3", "ffmpeg", "cargo", "make", "go", "zig", "clang", "ruby",
+        "xcodebuild", "swift", "swiftc", "clang", "ld",
+        "make", "cmake", "ninja", "cargo", "rustc",
+        "go", "zig", "ruby", "ffmpeg",
     ]
 
     func start() {

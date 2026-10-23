@@ -4,6 +4,7 @@ struct MatchaState {
     var active: Bool = false
     var endDate: Date?
     var duration: TimeInterval?
+    var triggerBusy: Bool = false
 }
 
 enum Matcha {
@@ -29,7 +30,7 @@ enum Pref {
             showMenuBarIcon: true,
             showFloatingIndicator: true,
             translucentIndicator: true,
-            keepDisplayOn: false,
+            keepDisplayOn: true,
             appearance: "system",
             autoTriggers: true,
         ])

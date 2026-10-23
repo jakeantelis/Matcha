@@ -12,6 +12,9 @@ final class PanelView: NSView {
     private let detailLabel = NSTextField(labelWithString: "")
     private let gear = NSButton()
     private let durationInput = DurationInputView()
+    private let activityDot = NSImageView()
+    private let activityLabel = NSTextField(labelWithString: "")
+    private var presetChips: [PillButton] = []
 
     private let panelWidth: CGFloat = 280
     private let pad: CGFloat = 16
@@ -26,11 +29,33 @@ final class PanelView: NSView {
     func apply(state: MatchaState) {
         ring.active = state.active
         ring.accent = state.active ? Matcha.green : .controlAccentColor
+
+        var timed = false
         if state.active, let end = state.endDate, let total = state.duration, total > 0 {
+            timed = true
             ring.progress = CGFloat(max(0, min(1, end.timeIntervalSinceNow / total)))
+            ring.timeText = Fmt.clock(end.timeIntervalSinceNow)
         } else {
             ring.progress = state.active ? 1 : 0
+            ring.timeText = nil
         }
+        ring.pulsing = state.active && !timed
+
+        let activeTag: Int = {
+            guard state.active else { return -1 }
+            guard timed, let total = state.duration else { return 0 }
+            return Int(total.rounded())
+        }()
+        for chip in presetChips {
+            let selected = chip.tag == activeTag
+            chip.fillColor = selected ? Matcha.green : .quaternaryLabelColor
+            chip.hoverColor = selected ? Matcha.green.withAlphaComponent(0.85) : .tertiaryLabelColor
+            chip.textColor = selected ? .white : .labelColor
+        }
+
+        activityDot.contentTintColor = state.triggerBusy ? Matcha.green : .tertiaryLabelColor
+        activityLabel.stringValue = state.triggerBusy ? "Code activity detected" : "No code activity"
+        activityLabel.textColor = state.triggerBusy ? .secondaryLabelColor : .tertiaryLabelColor
 
         statusLabel.stringValue = state.active ? "Keeping awake" : "Sleep is allowed"
         if state.active {
@@ -108,11 +133,27 @@ final class PanelView: NSView {
         let chipSpecs: [(String, Int)] = [
             ("2h", 7200), ("4h", 14400), ("8h", 28800), ("\u{221E}", 0),
         ]
-        let chips = NSStackView(views: chipSpecs.map { chip($0.0, tag: $0.1) })
+        presetChips = chipSpecs.map { chip($0.0, tag: $0.1) }
+        let chips = NSStackView(views: presetChips)
         chips.orientation = .horizontal
         chips.distribution = .fillEqually
         chips.spacing = 6
         chips.widthAnchor.constraint(equalToConstant: inner).isActive = true
+
+        activityDot.image = symbolImage(["circle.fill"])?
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 6, weight: .regular))
+        activityDot.contentTintColor = .tertiaryLabelColor
+        activityDot.translatesAutoresizingMaskIntoConstraints = false
+        activityDot.widthAnchor.constraint(equalToConstant: 8).isActive = true
+        activityDot.heightAnchor.constraint(equalToConstant: 8).isActive = true
+
+        activityLabel.font = NSFont.systemFont(ofSize: 10.5)
+        activityLabel.textColor = .tertiaryLabelColor
+
+        let activityRow = NSStackView(views: [activityDot, activityLabel])
+        activityRow.orientation = .horizontal
+        activityRow.alignment = .centerY
+        activityRow.spacing = 5
 
         durationInput.onSubmit = { [weak self] text in
             self?.handleDuration(text)
@@ -125,11 +166,12 @@ final class PanelView: NSView {
         stack.alignment = .centerX
         stack.spacing = 0
         stack.translatesAutoresizingMaskIntoConstraints = false
-        [header, ring, statusLabel, detailLabel, chips, durationInput].forEach { stack.addArrangedSubview($0) }
+        [header, ring, statusLabel, detailLabel, activityRow, chips, durationInput].forEach { stack.addArrangedSubview($0) }
         stack.setCustomSpacing(14, after: header)
         stack.setCustomSpacing(12, after: ring)
         stack.setCustomSpacing(3, after: statusLabel)
-        stack.setCustomSpacing(14, after: detailLabel)
+        stack.setCustomSpacing(6, after: detailLabel)
+        stack.setCustomSpacing(12, after: activityRow)
         stack.setCustomSpacing(8, after: chips)
 
         addSubview(stack)

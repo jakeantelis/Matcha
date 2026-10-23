@@ -4,11 +4,20 @@ final class RingButton: NSView {
     var active = false { didSet { needsDisplay = true } }
     var progress: CGFloat = 0 { didSet { needsDisplay = true } }
     var accent: NSColor = .controlAccentColor { didSet { needsDisplay = true } }
+    var timeText: String? { didSet { if timeText != oldValue { needsDisplay = true } } }
+    var pulsing = false {
+        didSet {
+            guard pulsing != oldValue else { return }
+            pulsing ? startPulse() : stopPulse()
+        }
+    }
     var onClick: (() -> Void)?
 
     private var hovering = false
     private var tracking: NSTrackingArea?
     private var cursorPushed = false
+    private var pulseTimer: Timer?
+    private var pulsePhase: CGFloat = 0
 
     override var intrinsicContentSize: NSSize { NSSize(width: 128, height: 128) }
 
@@ -45,6 +54,29 @@ final class RingButton: NSView {
 
     deinit {
         if cursorPushed { NSCursor.pop() }
+        pulseTimer?.invalidate()
+    }
+
+    private func startPulse() {
+        guard pulseTimer == nil,
+              !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        else { return }
+
+        let timer = Timer(timeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            self.pulsePhase += 0.035
+            if self.pulsePhase > 1 { self.pulsePhase -= 1 }
+            self.needsDisplay = true
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        pulseTimer = timer
+    }
+
+    private func stopPulse() {
+        pulseTimer?.invalidate()
+        pulseTimer = nil
+        pulsePhase = 0
+        needsDisplay = true
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -79,8 +111,29 @@ final class RingButton: NSView {
             )
             arc.lineWidth = lineWidth
             arc.lineCapStyle = .round
-            accent.setStroke()
+            if pulsing {
+                let wave = 0.5 + 0.5 * sin(pulsePhase * 2 * .pi)
+                accent.withAlphaComponent(0.5 + 0.5 * wave).setStroke()
+            } else {
+                accent.setStroke()
+            }
             arc.stroke()
+        }
+
+        if let text = timeText {
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: NSFont.monospacedDigitSystemFont(ofSize: 19, weight: .semibold),
+                .foregroundColor: NSColor.labelColor,
+            ]
+            let string = NSAttributedString(string: text, attributes: attributes)
+            let size = string.size()
+            string.draw(in: NSRect(
+                x: bounds.midX - size.width / 2,
+                y: bounds.midY - size.height / 2,
+                width: size.width,
+                height: size.height
+            ))
+            return
         }
 
         let names = active

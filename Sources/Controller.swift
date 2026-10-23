@@ -21,6 +21,12 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private var ticker: Timer?
     private var assertionID: IOPMAssertionID = 0
     private var displayAssertionID: IOPMAssertionID = 0
+    private var displayKeepAlive: Timer?
+    private var caffeinateProcess: Process?
+
+    func applicationWillTerminate(_ notification: Notification) {
+        releaseAssertions()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Pref.registerDefaults()
@@ -392,7 +398,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             return item
         }
 
-        menu.addItem(toggleItem("Keep Display On", Pref.keepDisplayOn, #selector(toggleKeepDisplay(_:))))
+        menu.addItem(toggleItem("Keep Display On & Unlocked", Pref.keepDisplayOn, #selector(toggleKeepDisplay(_:))))
         menu.addItem(toggleItem("Auto-Keep Awake for Code", Pref.autoTriggers, #selector(toggleAutoTriggers(_:))))
         menu.addItem(toggleItem("Show in Menu Bar", Pref.showMenuBarIcon, #selector(toggleMenuBarIcon(_:))))
         menu.addItem(toggleItem("Show Floating Indicator", Pref.showFloatingIndicator, #selector(toggleFloatingIndicator(_:))))
@@ -589,15 +595,53 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             assertionID = id
         }
         if UserDefaults.standard.bool(forKey: Pref.keepDisplayOn) {
+            startDisplayKeepAlive()
+        }
+    }
+
+    private func startDisplayKeepAlive() {
+        guard displayKeepAlive == nil else { return }
+        renewDisplayKeepAlive()
+
+        let timer = Timer(timeInterval: 30, repeats: true) { [weak self] _ in
+            self?.renewDisplayKeepAlive()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        displayKeepAlive = timer
+    }
+
+    private func renewDisplayKeepAlive() {
+        caffeinateProcess?.terminate()
+        caffeinateProcess = nil
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/caffeinate")
+        process.arguments = ["-d", "-u", "-t", "40"]
+        do {
+            try process.run()
+            caffeinateProcess = process
+        } catch {
+            guard displayAssertionID == 0 else { return }
             var displayID: IOPMAssertionID = 0
             if IOPMAssertionCreateWithName(
                 kIOPMAssertionTypePreventUserIdleDisplaySleep as CFString,
                 IOPMAssertionLevel(kIOPMAssertionLevelOn),
-                reason,
+                "User chose to keep this Mac awake" as CFString,
                 &displayID
             ) == kIOReturnSuccess {
                 displayAssertionID = displayID
             }
+        }
+    }
+
+    private func stopDisplayKeepAlive() {
+        displayKeepAlive?.invalidate()
+        displayKeepAlive = nil
+        caffeinateProcess?.terminate()
+        caffeinateProcess = nil
+        if displayAssertionID != 0 {
+            IOPMAssertionRelease(displayAssertionID)
+            displayAssertionID = 0
         }
     }
 
@@ -606,14 +650,16 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             IOPMAssertionRelease(assertionID)
             assertionID = 0
         }
-        if displayAssertionID != 0 {
-            IOPMAssertionRelease(displayAssertionID)
-            displayAssertionID = 0
-        }
+        stopDisplayKeepAlive()
     }
 
     private func refreshAll() {
-        let state = MatchaState(active: active, endDate: endDate, duration: duration)
+        let state = MatchaState(
+            active: active,
+            endDate: endDate,
+            duration: duration,
+            triggerBusy: triggerBusy
+        )
         popoverPanel?.apply(state: state)
         windowPanel?.apply(state: state)
         badge?.translucent = UserDefaults.standard.bool(forKey: Pref.translucentIndicator)
