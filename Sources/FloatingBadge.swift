@@ -126,12 +126,14 @@ final class BadgeView: NSView {
         NSColor.controlBackgroundColor.withAlphaComponent(fillAlpha).setFill()
         path.fill()
 
+        let glowColor = active ? Matcha.green : NSColor.controlAccentColor
         if hovering {
-            let glow = NSBezierPath(ovalIn: circle.insetBy(dx: -3 * scale, dy: -3 * scale))
-            let glowColor = active ? Matcha.green : NSColor.controlAccentColor
-            glowColor.withAlphaComponent(0.22).setStroke()
-            glow.lineWidth = 3 * scale
-            glow.stroke()
+            let glow = NSBezierPath(ovalIn: circle.insetBy(dx: -4 * scale, dy: -4 * scale))
+            let g = NSGradient(colors: [
+                (active ? Matcha.green : NSColor.controlAccentColor).withAlphaComponent(0.28),
+                (active ? Matcha.green : NSColor.controlAccentColor).withAlphaComponent(0)
+            ])
+            g?.draw(in: glow.bounds, angle: -90)
         }
 
         let borderColor: NSColor
