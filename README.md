@@ -9,6 +9,8 @@ A minimalist macOS menu bar / desktop app that keeps your Mac awake — no trigg
 - **Optional menu bar icon** with the same controls
 - **Auto-keep awake for code** — watches for real build/encode tools (`xcodebuild`, `swiftc`, `clang`, `make`, `cmake`, `ninja`, `cargo`, `rustc`, `go`, `zig`, `ffmpeg`, …) and sustained high CPU; if you step away (3+ min idle) while something is running, it offers to keep the Mac awake via a notification. Idle AI-assistant apps are deliberately ignored; agents should report long jobs via `matchactl on <duration>`.
 - Keep display on and prevent the screen saver / lock screen (in addition to preventing system sleep)
+- **Session restore** — if Matcha crashes or is force-quit, a timed session resumes with its remaining time on next launch (an intentional Quit ends it)
+- **Low battery guard** — stops a session at 20% while on battery and tells you; laptops only, hidden on Macs without a battery
 - Launch at login, light/dark/system appearance
 - **Automation** — CLI + `matcha://` URL scheme so scripts or AI agents can query and control it
 
@@ -56,6 +58,13 @@ open -g "matcha://toggle"
 ```
 
 This compiles the Swift sources, bundles `AppIcon.icns`, ad-hoc codesigns, and installs to `/Applications/Matcha.app`.
+Works on laptops, Mac mini and iMac alike; battery-specific UI only appears on Macs that have a battery.
+
+Built locally, the app is not quarantined and launches normally. A zip downloaded
+from GitHub is unsigned (no paid Apple Developer ID), so Gatekeeper will warn on
+first launch. Either right-click the app and choose **Open**, approve it under
+**System Settings → Privacy & Security → Open Anyway**, or build it yourself with
+the command above.
 
 Other modes:
 
