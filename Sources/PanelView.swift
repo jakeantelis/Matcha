@@ -55,9 +55,18 @@ final class PanelView: NSView {
             chip.textColor = selected ? .white : .labelColor
         }
 
-        activityDot.contentTintColor = state.triggerBusy ? Matcha.green : .tertiaryLabelColor
-        activityLabel.stringValue = state.triggerBusy ? "Build/activity detected" : "No build activity"
-        activityLabel.textColor = state.triggerBusy ? .secondaryLabelColor : .tertiaryLabelColor
+        let busy = state.triggerBusy || state.agentRunning
+        activityDot.contentTintColor = busy ? Matcha.green : .tertiaryLabelColor
+        if state.triggerBusy {
+            activityLabel.stringValue = "Build or export activity detected"
+        } else if let agent = state.agentName {
+            activityLabel.stringValue = "\(agent) is running"
+        } else if state.agentRunning {
+            activityLabel.stringValue = "AI coding agent running"
+        } else {
+            activityLabel.stringValue = "No build or agent activity"
+        }
+        activityLabel.textColor = busy ? .secondaryLabelColor : .tertiaryLabelColor
 
         statusLabel.stringValue = state.active ? "Awake — display unlocked" : "Sleep allowed"
         detailLabel.stringValue = state.active ? (state.endDate != nil ? Fmt.remainingText(state) : "Until you stop") : "Your Mac can sleep normally"

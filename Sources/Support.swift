@@ -44,6 +44,8 @@ struct MatchaState {
     var endDate: Date?
     var duration: TimeInterval?
     var triggerBusy: Bool = false
+    var agentRunning: Bool = false
+    var agentName: String?
 }
 
 enum Matcha {
@@ -69,6 +71,7 @@ enum Pref {
     static let sessionEnd = "sessionEnd"
     static let sessionDuration = "sessionDuration"
     static let autoTriggers = "autoTriggers"
+    static let customAgents = "customAgents"
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -192,4 +195,80 @@ func tinted(_ image: NSImage, _ color: NSColor) -> NSImage {
     result.unlockFocus()
     result.isTemplate = false
     return result
+}
+
+
+enum AgentRegistry {
+    static let builtIn: [(name: String, label: String)] = [
+        ("claude", "Claude Code"),
+        ("codex", "Codex"),
+        ("opencode", "opencode"),
+        ("aider", "Aider"),
+        ("cursor", "Cursor"),
+        ("gemini", "Gemini CLI"),
+        ("windsurf", "Windsurf"),
+        ("continue", "Continue"),
+        ("copilot", "Copilot"),
+        ("cline", "Cline"),
+        ("roo", "Roo Code"),
+        ("augment", "Augment"),
+        ("crush", "Crush"),
+        ("amp", "Amp"),
+        ("goose", "Goose"),
+        ("ollama", "Ollama"),
+        ("devin", "Devin"),
+    ]
+
+    static var builtInNames: Set<String> { Set(builtIn.map(\.name)) }
+
+    static var builtInLabels: [String: String] {
+        Dictionary(uniqueKeysWithValues: builtIn.map { ($0.name, $0.label) })
+    }
+
+    static var customNames: [String] {
+        var names = (UserDefaults.standard.stringArray(forKey: Pref.customAgents) ?? [])
+            .map { normalize($0) }
+            .filter { !$0.isEmpty }
+        if let text = try? String(contentsOf: agentsFile, encoding: .utf8) {
+            for line in text.split(separator: "\n") {
+                let value = normalize(String(line))
+                if !value.isEmpty { names.append(value) }
+            }
+        }
+        var seen = Set<String>()
+        return names.filter { seen.insert($0).inserted }
+    }
+
+    static var allNames: Set<String> { builtInNames.union(customNames) }
+
+    static var agentsFile: URL {
+        FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Matcha", isDirectory: true)
+            .appendingPathComponent("agents.txt")
+    }
+
+    static func label(for name: String) -> String {
+        builtInLabels[name] ?? name
+    }
+
+    @discardableResult
+    static func addCustom(_ raw: String) -> Bool {
+        let name = normalize(raw)
+        guard !name.isEmpty, !builtInNames.contains(name) else { return false }
+        var names = UserDefaults.standard.stringArray(forKey: Pref.customAgents) ?? []
+        guard !names.contains(name) else { return false }
+        names.append(name)
+        UserDefaults.standard.set(names, forKey: Pref.customAgents)
+        return true
+    }
+
+    static func normalize(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+        guard !trimmed.isEmpty else { return "" }
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_."))
+        guard trimmed.unicodeScalars.allSatisfy({ allowed.contains($0) }) else { return "" }
+        return trimmed.lowercased()
+    }
 }

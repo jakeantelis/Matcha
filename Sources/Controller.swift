@@ -16,6 +16,8 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private let triggers = TriggerMonitor()
     private let hotKeys = HotKeyManager()
     private var triggerBusy = false
+    private var agentRunning = false
+    private var agentName: String?
     private var pendingShowWorkItem: DispatchWorkItem?
 
     private var active = false
@@ -40,34 +42,78 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     }
 
     private func checkAgents() {
-        guard !active else { return }
-        let procs = ["claude", "codex", "opencode", "aider", "roo", "cline", "continue", "copilot", "gemini"]
+        let procs = AgentRegistry.allNames
         DispatchQueue.global(qos: .utility).async { [weak self] in
             let task = Process()
             task.launchPath = "/bin/ps"
-            task.arguments = ["-axo", "comm="]
+            task.arguments = ["-axo", "args="]
             let pipe = Pipe()
             task.standardOutput = pipe
             do {
                 try task.run()
-                task.waitUntilExit()
             } catch {
                 return
             }
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            task.waitUntilExit()
             guard task.terminationStatus == 0,
-                  let data = try? pipe.fileHandleForReading.readToEnd(),
                   let out = String(data: data, encoding: .utf8) else { return }
-            let lower = out.lowercased()
-            var running = false
-            for p in procs {
-                if lower.contains("/\(p)") || lower.hasSuffix(p) || lower.contains(" \(p)") {
-                    running = true
+
+            let interpreters: Set<String> = ["node", "bun", "deno", "python", "python3", "python3.11", "python3.12", "ruby"]
+            let markers = [
+                "claude-code", "@anthropic-ai/claude", "/claude ",
+                "opencode", "/codex", "aider", "cursor-agent", "gemini-cli",
+                "goose", "crush", "windsurf", "continue-cli",
+            ]
+            let editorApps: Set<String> = ["claude", "cursor", "windsurf", "copilot", "codex", "gemini"]
+            let ignoredPaths = [
+                "/applications/chatgpt.app/", "/applications/gemini.app/",
+                "/applications/claude.app/", "/applications/cursor.app/",
+                "/applications/windsurf.app/", "/.codex/", "/contents/frameworks/",
+            ]
+            var matched: String?
+            for line in out.split(separator: "\n") {
+                let parts = line.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
+                guard let executable = parts.first else { continue }
+                let path = executable.lowercased()
+                let name = (executable as NSString).lastPathComponent.lowercased()
+                let args = parts.count > 1 ? parts[1].lowercased() : ""
+                if ignoredPaths.contains(where: { path.contains($0) }) {
+                    continue
+                }
+                if path.contains(".app/contents/macos/"), editorApps.contains(name) {
+                    continue
+                }
+                if procs.contains(name) {
+                    matched = name
+                    break
+                }
+                if interpreters.contains(name), let marker = markers.first(where: { args.contains($0) }) {
+                    let key = marker.contains("opencode") ? "opencode"
+                        : marker.contains("codex") ? "codex"
+                        : marker.contains("claude") ? "claude"
+                        : marker.contains("cursor") ? "cursor-agent"
+                        : marker.contains("gemini") ? "gemini-cli"
+                        : marker.contains("aider") ? "aider"
+                        : marker.contains("goose") ? "goose"
+                        : marker.contains("crush") ? "crush"
+                        : marker.contains("windsurf") ? "windsurf"
+                        : "continue"
+                    matched = key
                     break
                 }
             }
-            guard running else { return }
+            let running = matched != nil
+            let label = matched.map { AgentRegistry.label(for: $0) }
+
             DispatchQueue.main.async {
-                guard let self = self, !self.active else { return }
+                guard let self = self else { return }
+                if self.agentRunning != running || self.agentName != label {
+                    self.agentRunning = running
+                    self.agentName = label
+                    self.refreshAll()
+                }
+                guard running, !self.active else { return }
                 let key = "lastAgentPrompt"
                 let last = UserDefaults.standard.double(forKey: key)
                 if Date().timeIntervalSince1970 - last > 1800 {
@@ -85,7 +131,8 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             DispatchQueue.main.async {
                 let content = UNMutableNotificationContent()
                 content.title = "Keep your Mac awake?"
-                content.body = "An AI coding agent is running. Matcha can prevent sleep while it works."
+                content.body = "A build or AI agent is running. Matcha can prevent sleep while it works."
+
                 content.categoryIdentifier = "AWAY"
                 content.sound = .default
                 center.add(UNNotificationRequest(identifier: "matcha.agent.\(UUID().uuidString)", content: content, trigger: nil))
@@ -114,7 +161,11 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         popover.contentViewController = vc
 
         badge = FloatingBadge(size: FloatingBadge.size(for: UserDefaults.standard.string(forKey: Pref.badgeSize) ?? "medium"))
-        badge?.onClick = { [weak self] in self?.presentBadgeMenu() }
+        badge?.onClick = { [weak self] in
+            guard let self else { return }
+            self.showWindow()
+            NSApp.activate(ignoringOtherApps: true)
+        }
         badge?.onRightClick = { [weak self] in self?.presentBadgeMenu() }
         badge?.onQuickAdd = { [weak self] seconds in self?.extend(by: seconds) }
         badge?.onStop = { [weak self] in self?.stop() }
@@ -309,6 +360,8 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             "remaining": endDate.map { max(0, Int($0.timeIntervalSinceNow.rounded())) } ?? -1,
             "duration": duration.map { Int($0) } ?? -1,
             "trigger": triggerBusy,
+            "agent": agentRunning,
+            "agentName": agentName ?? "",
             "hotkeys": hotKeysRegistered,
         ]
 
@@ -434,7 +487,8 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private func createStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
-            button.image = symbolImage(["cup.and.saucer.fill", "cup.and.saucer", "mug.fill", "mug"])
+            button.image = symbolImage(["moon.zzz.fill", "moon.stars", "cup.and.saucer.fill", "cup.and.saucer"])
+            button.contentTintColor = active ? Matcha.green : NSColor.tertiaryLabelColor
             button.imagePosition = .imageLeading
             button.font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
             button.action = #selector(statusClicked)
@@ -540,6 +594,10 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         menu.addItem(toggleItem("Show Floating Indicator", Pref.showFloatingIndicator, #selector(toggleFloatingIndicator(_:))))
         menu.addItem(toggleItem("Translucent Indicator", Pref.translucentIndicator, #selector(toggleTranslucent(_:))))
 
+        let addAgent = NSMenuItem(title: "Add Coding Agent\u{2026}", action: #selector(addCustomAgent(_:)), keyEquivalent: "")
+        addAgent.target = self
+        menu.addItem(addAgent)
+
         let sizeItem = NSMenuItem(title: "Indicator Size", action: nil, keyEquivalent: "")
         let sizeMenu = NSMenu()
         let sizes: [(String, String)] = [("Small", "small"), ("Medium", "medium"), ("Large", "large")]
@@ -595,6 +653,28 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             NSMenuItem(title: "Quit Matcha", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         )
         return menu
+    }
+
+    @objc private func addCustomAgent(_ sender: Any?) {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Add a coding agent"
+        alert.informativeText = "Enter the process name shown in Activity Monitor, for example opencode or my-agent. Matcha will watch for it and offer to stay awake."
+        alert.addButton(withTitle: "Add")
+        alert.addButton(withTitle: "Cancel")
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
+        field.placeholderString = "process name"
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        guard AgentRegistry.addCustom(field.stringValue) else {
+            let warning = NSAlert()
+            warning.messageText = "Couldn't add that agent"
+            warning.informativeText = "Use a short process name with letters, numbers, dashes, dots, or underscores. It may already be supported."
+            warning.runModal()
+            return
+        }
+        checkAgents()
     }
 
     private struct ReleaseInfo: Decodable {
@@ -1048,7 +1128,9 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             active: active,
             endDate: endDate,
             duration: duration,
-            triggerBusy: triggerBusy
+            triggerBusy: triggerBusy,
+            agentRunning: agentRunning,
+            agentName: agentName
         )
         popoverPanel?.apply(state: state)
         windowPanel?.apply(state: state)
@@ -1094,14 +1176,16 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         button.image = symbolImage(
             active
                 ? ["cup.and.saucer.fill", "cup.and.saucer", "mug.fill", "mug"]
-                : ["cup.and.saucer", "mug"]
+                : ["moon.zzz.fill", "moon.stars", "cup.and.saucer"]
         )
-        button.contentTintColor = active ? Matcha.green : nil
+        button.contentTintColor = active ? Matcha.green : NSColor.tertiaryLabelColor
         let showTime = UserDefaults.standard.bool(forKey: Pref.menuBarCountdown)
         if active, showTime {
             button.title = endDate.map { " " + Fmt.clock($0.timeIntervalSinceNow) } ?? " \u{221E}"
+            button.toolTip = active && endDate != nil ? "Matcha — \(Fmt.clock(endDate!.timeIntervalSinceNow)) left" : (active ? "Matcha — Until you stop" : "Matcha — Ready")
         } else {
             button.title = ""
+            button.toolTip = active ? "Matcha — Active" : "Matcha — Ready"
         }
     }
 }

@@ -38,7 +38,7 @@ final class FloatingBadge: NSPanel {
 
         badgeView.frame = NSRect(x: 0, y: 0, width: side, height: side)
         badgeView.autoresizingMask = [.width, .height]
-        badgeView.toolTip = "Click for controls \u{00B7} Drag to move"
+        badgeView.toolTip = "Click for timer and settings \u{00B7} Right-click for quick actions \u{00B7} Drag to move"
         badgeView.onQuickAdd = { [weak self] seconds in self?.onQuickAdd?(seconds) }
         badgeView.onStop = { [weak self] in self?.onStop?() }
         contentView = badgeView
@@ -127,12 +127,17 @@ final class BadgeView: NSView {
         path.fill()
 
         if hovering {
-            let glow = NSBezierPath(ovalIn: circle.insetBy(dx: -4 * scale, dy: -4 * scale))
-            let g = NSGradient(colors: [
-                (active ? Matcha.green : NSColor.controlAccentColor).withAlphaComponent(0.22),
-                (active ? Matcha.green : NSColor.controlAccentColor).withAlphaComponent(0)
-            ])
-            g?.draw(in: glow.bounds, angle: -90)
+            let glowRect = NSInsetRect(circle, -2 * scale, -2 * scale)
+            if let ctx = NSGraphicsContext.current {
+                ctx.saveGraphicsState()
+                NSBezierPath(ovalIn: glowRect).addClip()
+                let g = NSGradient(colors: [
+                    (active ? Matcha.green : NSColor.controlAccentColor).withAlphaComponent(0.16),
+                    (active ? Matcha.green : NSColor.controlAccentColor).withAlphaComponent(0)
+                ])
+                g?.draw(in: glowRect, angle: -90)
+                ctx.restoreGraphicsState()
+            }
         }
 
         let borderColor: NSColor
@@ -179,23 +184,16 @@ final class BadgeView: NSView {
             ))
         } else {
         if !active {
-            let cupConfig = NSImage.SymbolConfiguration(pointSize: 24 * scale, weight: .medium)
+            let cupConfig = NSImage.SymbolConfiguration(pointSize: 24 * scale, weight: .regular)
             if let cup = NSImage(systemSymbolName: "cup.and.saucer", accessibilityDescription: nil)?
                 .withSymbolConfiguration(cupConfig) {
-                tinted(cup, hovering ? NSColor.labelColor : NSColor.secondaryLabelColor).draw(in: NSRect(
+                tinted(cup, hovering ? NSColor.secondaryLabelColor : NSColor.tertiaryLabelColor).draw(in: NSRect(
                     x: bounds.midX - cup.size.width / 2,
                     y: bounds.midY - cup.size.height / 2,
                     width: cup.size.width,
                     height: cup.size.height
                 ))
             }
-            NSColor.tertiaryLabelColor.setFill()
-            let d1 = NSBezierPath(ovalIn: NSRect(x: bounds.midX + 12 * scale, y: bounds.midY - 8 * scale, width: 3 * scale, height: 3 * scale))
-            d1.fill()
-            let d2 = NSBezierPath(ovalIn: NSRect(x: bounds.midX + 16 * scale, y: bounds.midY - 10 * scale, width: 4 * scale, height: 4 * scale))
-            d2.fill()
-            let d3 = NSBezierPath(ovalIn: NSRect(x: bounds.midX + 21 * scale, y: bounds.midY - 13 * scale, width: 5 * scale, height: 5 * scale))
-            d3.fill()
             return
         }
             let names = active

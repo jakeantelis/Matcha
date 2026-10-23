@@ -48,10 +48,11 @@ case "$command" in
         active=$(plutil -extract active raw -o - "$STATUS_FILE" 2>/dev/null || echo false)
         remaining=$(plutil -extract remaining raw -o - "$STATUS_FILE" 2>/dev/null || echo -1)
         trigger=$(plutil -extract trigger raw -o - "$STATUS_FILE" 2>/dev/null || echo false)
+        agent=$(plutil -extract agent raw -o - "$STATUS_FILE" 2>/dev/null || echo false)
         endDate=$(plutil -extract endDate raw -o - "$STATUS_FILE" 2>/dev/null || echo 0)
         duration=$(plutil -extract duration raw -o - "$STATUS_FILE" 2>/dev/null || echo 0)
         if [[ "$json" == "true" ]]; then
-            printf '{"active":%s,"remaining":%s,"endDate":%s,"duration":%s,"trigger":%s}\n' "$active" "$remaining" "$endDate" "$duration" "$trigger"
+            printf '{"active":%s,"remaining":%s,"endDate":%s,"duration":%s,"trigger":%s,"agent":%s}\n' "$active" "$remaining" "$endDate" "$duration" "$trigger" "$agent"
             exit 0
         fi
         if [[ "$active" == "true" ]]; then
