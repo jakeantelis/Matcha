@@ -15,6 +15,14 @@
 
 Tiny macOS app with a floating timer, menu bar controls, global hotkeys, CLI, and agent skill. Keeps your display on and lock screen away while builds, exports, or AI coding agents run. Crash-safe and scriptable.
 
+## Why Matcha
+
+Most keep-awake tools only stop idle sleep. Matcha also keeps the display on and
+the lock screen away, restores timed sessions after a crash, and detects when a
+build or coding agent is running so it can offer to stay awake — then lets agents
+report long jobs themselves with `matcha run -- <cmd>` instead of holding your Mac
+awake forever.
+
 ## Install
 
 One command:

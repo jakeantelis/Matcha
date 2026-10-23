@@ -2,9 +2,11 @@
 set -u
 
 STATUS_FILE="$HOME/Library/Application Support/Matcha/status.plist"
+APP_PLIST="/Applications/Matcha.app/Contents/Info.plist"
 
 usage() {
-    echo "usage: matchactl <on [hours] | off | toggle | extend <hours> | status> [--json]"
+    echo "usage: matchactl <on [duration] | off | toggle | extend [duration] | status | version> [--json]"
+    echo "       durations: 2h, 90m, 45, 1d, 2.5h, 2h 30m"
 }
 
 json=false
@@ -19,10 +21,49 @@ done
 
 command="${args[1]:-status}"
 
+# Parse a human duration ("2h", "90m", "45", "2.5h", "2h 30m") into integer seconds.
+# Sets REPLY to the seconds, or empty on failure/missing input.
+parse_duration() {
+    local rest="${1:-}"
+    local total=0.0
+    if [[ -z "$rest" ]]; then
+        REPLY=""
+        return 0
+    fi
+    while [[ -n "$rest" ]]; do
+        rest="${rest#"${rest%%[![:space:]]*}"}"
+        [[ -z "$rest" ]] && break
+        if [[ "$rest" =~ '^([0-9]*\.?[0-9]+)[[:space:]]*([a-zA-Z]*)' ]]; then
+            local num="$match[1]"
+            local u="$match[2]"
+            rest="${rest#$MATCH}"
+            case "$u" in
+                d|day|days)
+                    (( total += num * 86400 )) ;;
+                h|hr|hrs|hour|hours|"")
+                    (( total += num * 3600 )) ;;
+                m|min|mins|minute|minutes)
+                    (( total += num * 60 )) ;;
+                s|sec|secs|second|seconds)
+                    (( total += num )) ;;
+                *)
+                    REPLY=""
+                    return 0 ;;
+            esac
+        else
+            REPLY=""
+            return 0
+        fi
+    done
+    REPLY="$(printf '%.0f' "$total")"
+    return 0
+}
+
 case "$command" in
     on)
-        if [[ -n "${args[2]:-}" ]]; then
-            open -g "matcha://on?hours=${args[2]}"
+        parse_duration "${args[2]:-}"
+        if [[ -n "$REPLY" ]]; then
+            open -g "matcha://on?seconds=$REPLY"
         else
             open -g "matcha://on"
         fi
@@ -34,7 +75,20 @@ case "$command" in
         open -g "matcha://toggle"
         ;;
     extend)
-        open -g "matcha://extend?hours=${args[2]:-1}"
+        parse_duration "${args[2]:-}"
+        if [[ -n "$REPLY" ]]; then
+            open -g "matcha://extend?seconds=$REPLY"
+        else
+            open -g "matcha://extend"
+        fi
+        ;;
+    version)
+        if [[ -f "$APP_PLIST" ]]; then
+            plutil -extract CFBundleShortVersionString raw -o - "$APP_PLIST" 2>/dev/null || echo "unknown"
+        else
+            echo "Matcha is not installed"
+            exit 1
+        fi
         ;;
     status)
         if [[ ! -f "$STATUS_FILE" ]]; then
@@ -49,10 +103,11 @@ case "$command" in
         remaining=$(plutil -extract remaining raw -o - "$STATUS_FILE" 2>/dev/null || echo -1)
         trigger=$(plutil -extract trigger raw -o - "$STATUS_FILE" 2>/dev/null || echo false)
         agent=$(plutil -extract agent raw -o - "$STATUS_FILE" 2>/dev/null || echo false)
+        agentName=$(plutil -extract agentName raw -o - "$STATUS_FILE" 2>/dev/null || echo "")
         endDate=$(plutil -extract endDate raw -o - "$STATUS_FILE" 2>/dev/null || echo 0)
         duration=$(plutil -extract duration raw -o - "$STATUS_FILE" 2>/dev/null || echo 0)
         if [[ "$json" == "true" ]]; then
-            printf '{"active":%s,"remaining":%s,"endDate":%s,"duration":%s,"trigger":%s,"agent":%s}\n' "$active" "$remaining" "$endDate" "$duration" "$trigger" "$agent"
+            printf '{"active":%s,"remaining":%s,"endDate":%s,"duration":%s,"trigger":%s,"agent":%s,"agentName":"%s"}\n' "$active" "$remaining" "$endDate" "$duration" "$trigger" "$agent" "$agentName"
             exit 0
         fi
         if [[ "$active" == "true" ]]; then
@@ -74,7 +129,8 @@ case "$command" in
         else
             echo "off"
         fi
-        echo "coding activity: $trigger"
+        echo "build/export activity: $trigger"
+        [[ "$agentName" != "" ]] && echo "coding agent: $agentName"
         ;;
     *)
         usage

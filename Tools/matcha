@@ -27,21 +27,56 @@ shift
 
 case "$cmd" in
   run)
+    keep="4"
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --keep|-k)
+          keep="$2"
+          shift 2
+          ;;
+        --)
+          shift
+          break
+          ;;
+        *)
+          break
+          ;;
+      esac
+    done
     if [ $# -eq 0 ]; then
-      echo "usage: matcha run -- <command> [args...]" >&2
+      echo "usage: matcha run [--keep <duration>] -- <command> [args...]" >&2
       exit 1
     fi
-    if [ "$1" = "--" ]; then shift; fi
-    "$MATCHA" on 4 >/dev/null 2>&1 || true
+    "$MATCHA" on "$keep" >/dev/null 2>&1 || true
     "$@"
     rc=$?
     "$MATCHA" off >/dev/null 2>&1 || true
     exit $rc
     ;;
-  on|off|toggle|status|extend|add)
+  watch)
+    interval="${1:-5}"
+    while true; do
+      "$MATCHA" status
+      sleep "$interval"
+    done
+    ;;
+  on|off|toggle|status|extend|add|version)
     if [ "$cmd" = "add" ]; then cmd="extend"; fi
     if [ $# -eq 0 ]; then "$MATCHA" "$cmd"; else "$MATCHA" "$cmd" "$@"; fi
     exit $?
+    ;;
+  help|-h|--help)
+    echo "usage: matcha <command> [args]"
+    echo ""
+    echo "  status [--json]           show session and agent status"
+    echo "  on [duration]             start (2h, 90m, 45, 1d, 2.5h)"
+    echo "  off                       stop"
+    echo "  toggle                    start/stop"
+    echo "  extend [duration]         add time to a running session"
+    echo "  run [--keep d] -- <cmd>   stay awake while <cmd> runs"
+    echo "  watch [seconds]           watch status, refreshing every Ns"
+    echo "  version                   show installed version"
+    exit 0
     ;;
   *)
     "$MATCHA" "$cmd" "$@"
