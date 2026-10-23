@@ -27,8 +27,59 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private var displayKeepAlive: Timer?
     private var caffeinateProcess: Process?
     private var batteryTimer: Timer?
-    private var warnedEnding = false
     private var hotKeysRegistered = false
+    private var warnedEnding = false
+    private var agentTimer: Timer?
+
+    private func startAgentDetection() {
+        agentTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            self?.checkAgents()
+        }
+        RunLoop.main.add(agentTimer!, forMode: .common)
+        checkAgents()
+    }
+
+    private func checkAgents() {
+        guard !active else { return }
+        let procs = ["claude", "codex", "opencode", "aider", "roo", "cline", "continue", "copilot"]
+        var running = false
+        let task = Process()
+        task.launchPath = "/bin/ps"
+        task.arguments = ["-axo", "comm="]
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        try? task.run()
+        task.waitUntilExit()
+        if let data = try? pipe.fileHandleForReading.readToEnd(),
+           let out = String(data: data, encoding: .utf8) {
+            for p in procs {
+                if out.lowercased().contains(p) { running = true; break }
+            }
+        }
+        if running {
+            let key = "lastAgentPrompt"
+            let last = UserDefaults.standard.double(forKey: key)
+            if Date().timeIntervalSince1970 - last > 1800 {
+                UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: key)
+                offerKeepAwakeAgent()
+            }
+        }
+    }
+
+    private func offerKeepAwakeAgent() {
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
+            guard granted else { return }
+            DispatchQueue.main.async {
+                let content = UNMutableNotificationContent()
+                content.title = "Keep your Mac awake?"
+                content.body = "An AI coding agent is running. Matcha can prevent sleep while it works."
+                content.categoryIdentifier = "AWAY"
+                content.sound = .default
+                center.add(UNNotificationRequest(identifier: "matcha.agent.\(UUID().uuidString)", content: content, trigger: nil))
+            }
+        }
+    }
 
     func applicationWillTerminate(_ notification: Notification) {
         clearPersistedSession()
@@ -53,6 +104,8 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         badge = FloatingBadge(size: FloatingBadge.size(for: UserDefaults.standard.string(forKey: Pref.badgeSize) ?? "medium"))
         badge?.onClick = { [weak self] in self?.presentBadgeMenu() }
         badge?.onRightClick = { [weak self] in self?.presentBadgeMenu() }
+        badge?.onQuickAdd = { [weak self] seconds in self?.extend(by: seconds) }
+        badge?.onStop = { [weak self] in self?.stop() }
         badge?.onMoved = { origin in
             UserDefaults.standard.set("\(origin.x),\(origin.y)", forKey: Pref.badgeOrigin)
         }
@@ -69,6 +122,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         applyPreferences()
         restoreSession()
         applyTriggers()
+        startAgentDetection()
         refreshAll()
 
         let show = DispatchWorkItem { [weak self] in
@@ -429,6 +483,8 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         power.target = self
         menu.addItem(power)
 
+        menu.addItem(timeItem("+15 Min", seconds: 900))
+        menu.addItem(timeItem("+30 Min", seconds: 1800))
         menu.addItem(timeItem("+1 Hour", seconds: 3600))
         menu.addItem(timeItem("+4 Hours", seconds: 14400))
 
@@ -727,6 +783,8 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         }
     }
 
+    private var sessionStartedAt: Date?
+
     private func start(duration seconds: TimeInterval?) {
         if !active {
             createAssertions()
@@ -735,6 +793,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
                 return
             }
             active = true
+            sessionStartedAt = Date()
         }
         duration = seconds
         endDate = seconds.map { Date().addingTimeInterval($0) }
@@ -757,6 +816,17 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         warnedEnding = false
         stopBatteryGuard()
         clearPersistedSession()
+        if let started = sessionStartedAt {
+            let mins = Int(Date().timeIntervalSince(started) / 60)
+            if mins >= 5 {
+                let content = UNMutableNotificationContent()
+                content.title = "Session complete"
+                content.body = "Kept your Mac awake for \(mins) min"
+                content.sound = .default
+                UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "matcha.summary.\(UUID().uuidString)", content: content, trigger: nil))
+            }
+            sessionStartedAt = nil
+        }
         refreshAll()
     }
 

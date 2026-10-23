@@ -24,7 +24,9 @@ if [[ -f Resources/AppIcon.icns ]]; then
     cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 fi
 if [[ -f Tools/matchactl ]]; then
-    cp Tools/matchactl "$APP/Contents/Resources/matchactl"
+    cp Tools/matcha "$APP/Contents/Resources/matcha" 2>/dev/null || true
+chmod +x "$APP/Contents/Resources/matcha" 2>/dev/null || true
+cp Tools/matchactl "$APP/Contents/Resources/matchactl"
     chmod +x "$APP/Contents/Resources/matchactl"
 fi
 if ! codesign --force --sign - "$APP" 2>&1; then
