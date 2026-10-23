@@ -1,4 +1,4 @@
-## Matcha 1.3.0
+## Matcha 1.3.1
 
 A minimalist macOS keep-awake app that also prevents the screen saver and lock
 screen, with first-class automation for scripts and AI agents.
@@ -8,13 +8,17 @@ screen, with first-class automation for scripts and AI agents.
 - Keeps the Mac awake and the display unlocked for a chosen duration or until stopped
 - A soft matcha wash fills the main window while a session is active
 - Typed durations (`8`, `2.5h`, `1d`, `2h 30m`), presets, and a resizable floating indicator
+- One-command install and update, with checksum verification and automatic agent setup
+- **Check for Updates…** in the app menu
+- Friendly uninstall script that also removes agent instructions
 - Optional live countdown (or infinity) beside the menu bar icon
 - Global hotkeys: `Ctrl-Opt-Cmd-M` toggles, `Ctrl-Opt-Cmd-1` starts one hour
 - Five-minute ending warning with **Add 1 Hour** / **Stop**; auto-extends 30 minutes while a build is still running
 - Auto-keep-awake for real build/encode tools, plus a low battery guard
 - Sessions survive crashes and force-quits; an intentional Quit ends them
 - CLI, `matcha://` URL scheme, and a status plist for agents
-- Agent kit for Claude Code, opencode, Codex CLI, Gemini CLI, Cursor, Windsurf, Aider, and any shell-capable agent
+- Agent kit auto-configures Claude Code, opencode, Codex CLI, Gemini CLI, and Windsurf; project rules for Cursor and Aider
+- No accounts, analytics, or telemetry
 
 ### Install
 
@@ -43,6 +47,14 @@ curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/insta
 
 Agents start a session before long work and stop it afterwards, leaving sessions
 you started yourself untouched.
+
+### Uninstall
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/uninstall.sh | sh
+```
+
+Add `-s -- --yes --purge` to remove preferences and session data as well.
 
 ### Requirements
 
