@@ -1,7 +1,7 @@
 import AppKit
 
 enum Render {
-    static func panel(to path: String, dark: Bool, active: Bool) {
+    static func panel(to path: String, dark: Bool, active: Bool, agents: [String] = [], card: Bool = false) {
         NSApp.setActivationPolicy(.accessory)
         NSApp.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
 
@@ -11,6 +11,9 @@ enum Render {
         if active {
             state.duration = 7200
             state.endDate = Date().addingTimeInterval(4530)
+        } else if !agents.isEmpty {
+            state.agentNames = agents
+            state.agentRunning = true
         }
         panel.apply(state: state)
         panel.layoutSubtreeIfNeeded()
@@ -21,13 +24,31 @@ enum Render {
         let image = NSImage(size: size)
         image.lockFocus()
 
-        let card = NSBezierPath(
+        if card {
+            let colors = dark
+                ? [NSColor(calibratedRed: 0.08, green: 0.11, blue: 0.09, alpha: 1),
+                   NSColor(calibratedRed: 0.03, green: 0.05, blue: 0.04, alpha: 1)]
+                : [NSColor(srgbRed: 0.94, green: 0.99, blue: 0.95, alpha: 1),
+                   NSColor(srgbRed: 0.84, green: 0.94, blue: 0.87, alpha: 1)]
+            NSGradient(colors: colors)?.draw(in: NSRect(origin: .zero, size: size), angle: -90)
+        }
+
+        let cardPath = NSBezierPath(
             roundedRect: NSRect(origin: .zero, size: size),
             xRadius: 20,
             yRadius: 20
         )
         NSColor.windowBackgroundColor.setFill()
-        card.fill()
+        cardPath.fill()
+
+        if card {
+            NSColor.windowBackgroundColor.setFill()
+            NSBezierPath(
+                roundedRect: NSRect(x: 8, y: 8, width: size.width - 16, height: size.height - 16),
+                xRadius: 14,
+                yRadius: 14
+            ).fill()
+        }
 
         let rep = panel.bitmapImageRepForCachingDisplay(in: panel.bounds)!
         panel.cacheDisplay(in: panel.bounds, to: rep)

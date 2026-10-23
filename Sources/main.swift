@@ -4,10 +4,16 @@ let app = NSApplication.shared
 
 let arguments = CommandLine.arguments
 if let index = arguments.firstIndex(of: "--render"), index + 1 < arguments.count {
+    var agents: [String] = []
+    if let ai = arguments.firstIndex(of: "--agents"), ai + 1 < arguments.count {
+        agents = arguments[ai + 1].split(separator: ",").map(String.init)
+    }
     Render.panel(
         to: arguments[index + 1],
         dark: arguments.contains("--dark"),
-        active: !arguments.contains("--idle")
+        active: !arguments.contains("--idle"),
+        agents: agents,
+        card: arguments.contains("--card")
     )
     exit(0)
 }

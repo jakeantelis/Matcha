@@ -1,5 +1,7 @@
 import AppKit
 
+private let brightGreen = NSColor(calibratedRed: 0.30, green: 0.90, blue: 0.45, alpha: 1)
+
 final class PanelView: NSView {
     var onToggle: (() -> Void)?
     var onPreset: ((TimeInterval?) -> Void)?
@@ -10,15 +12,19 @@ final class PanelView: NSView {
     private let cupIcon = NSImageView()
     private let statusLabel = NSTextField(labelWithString: "")
     private let detailLabel = NSTextField(labelWithString: "")
+    private let titleLabel = NSTextField(labelWithString: "Matcha")
     private let gear = NSButton()
     private let durationInput = DurationInputView()
     private let activityDot = NSImageView()
     private let activityLabel = NSTextField(labelWithString: "")
+    private let cursorLabel = NSTextField(labelWithString: "\u{2588}")
+    private let activityRow = NSStackView()
     private var presetChips: [PillButton] = []
     private let tint = TintView()
+    private var activityPulseTimer: Timer?
 
-    private let panelWidth: CGFloat = 280
-    private let pad: CGFloat = 16
+    private let panelWidth: CGFloat = 320
+    private let pad: CGFloat = 20
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -28,6 +34,8 @@ final class PanelView: NSView {
     required init?(coder: NSCoder) { fatalError() }
 
     func apply(state: MatchaState) {
+        let busy = state.triggerBusy || state.agentRunning
+        let activeBusy = state.active && busy
         tint.setActive(state.active)
         ring.active = state.active
         ring.accent = Matcha.green
@@ -55,25 +63,77 @@ final class PanelView: NSView {
             chip.textColor = selected ? .white : .labelColor
         }
 
-        let busy = state.triggerBusy || state.agentRunning
-        activityDot.contentTintColor = busy ? Matcha.green : .tertiaryLabelColor
+        activityDot.contentTintColor = activeBusy ? brightGreen : .tertiaryLabelColor
+        let activityText: String
         if state.triggerBusy {
-            activityLabel.stringValue = "Build or export activity detected"
-        } else if let agent = state.agentName {
-            activityLabel.stringValue = "\(agent) is running"
+            activityText = "build or export activity"
+        } else if !state.agentNames.isEmpty {
+            activityText = state.agentNames.count == 1
+                ? "\(state.agentNames[0]) is running"
+                : "\(state.agentNames.joined(separator: " · ")) are running"
         } else if state.agentRunning {
-            activityLabel.stringValue = "AI coding agent running"
+            activityText = "an AI coding agent is running"
         } else {
-            activityLabel.stringValue = "No build or agent activity"
+            activityText = "no build or agent activity"
         }
-        activityLabel.textColor = busy ? .secondaryLabelColor : .tertiaryLabelColor
+        let activityColor = activeBusy ? brightGreen : NSColor.secondaryLabelColor
+        var activityAttrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont(name: "Menlo-Regular", size: 11) ?? NSFont.monospacedSystemFont(ofSize: 11, weight: .regular),
+            .foregroundColor: activityColor,
+            .kern: 0.5,
+        ]
+        if activeBusy {
+            let shadow = NSShadow()
+            shadow.shadowColor = brightGreen.withAlphaComponent(0.9)
+            shadow.shadowBlurRadius = 5
+            shadow.shadowOffset = .zero
+            activityAttrs[.shadow] = shadow
+        }
+        activityLabel.attributedStringValue = NSAttributedString(string: activityText, attributes: activityAttrs)
+        activityRow.layer?.backgroundColor = activeBusy
+            ? NSColor(calibratedRed: 0.05, green: 0.09, blue: 0.07, alpha: 0.92).cgColor
+            : NSColor.quaternaryLabelColor.withAlphaComponent(0.5).cgColor
+        cursorLabel.textColor = brightGreen
 
-        statusLabel.stringValue = state.active ? "Awake — display unlocked" : "Sleep allowed"
-        detailLabel.stringValue = state.active ? (state.endDate != nil ? Fmt.remainingText(state) : "Until you stop") : "Your Mac can sleep normally"
-        cupIcon.contentTintColor = state.active ? Matcha.green : .secondaryLabelColor
+        if activeBusy {
+            startActivityPulse()
+        } else {
+            stopActivityPulse()
+        }
+
+        statusLabel.stringValue = state.active ? "Steeping · display unlocked" : "Sleep allowed"
+        if state.active {
+            detailLabel.stringValue = state.endDate != nil ? Fmt.remainingText(state) : "Until you stop"
+        } else {
+            detailLabel.stringValue = "Your Mac can sleep normally"
+        }
+        cupIcon.image = matchaMark(size: 18, active: state.active)
     }
 
     @objc private func gearClicked() { onMenu?(gear) }
+
+    private func startActivityPulse() {
+        guard activityPulseTimer == nil, animationsEnabled() else { return }
+        cursorLabel.alphaValue = 1
+        let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            guard animationsEnabled() else { self.stopActivityPulse(); return }
+            self.cursorLabel.alphaValue = self.cursorLabel.alphaValue > 0.5 ? 0 : 1
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        activityPulseTimer = timer
+    }
+
+    private func stopActivityPulse() {
+        activityPulseTimer?.invalidate()
+        activityPulseTimer = nil
+        cursorLabel.alphaValue = 0
+        activityLabel.alphaValue = 1
+    }
+
+    deinit {
+        activityPulseTimer?.invalidate()
+    }
 
     func setTintEnabled(_ enabled: Bool) {
         tint.isHidden = !enabled
@@ -84,6 +144,11 @@ final class PanelView: NSView {
     }
 
     @objc private func chipClicked(_ sender: NSButton) {
+        if sender.tag == 9999 {
+            durationInput.isHidden = false
+            durationInput.focus()
+            return
+        }
         onPreset?(sender.tag == 0 ? nil : TimeInterval(sender.tag))
     }
 
@@ -91,6 +156,7 @@ final class PanelView: NSView {
         let seconds = Fmt.parseDuration(text)
         if let seconds, seconds > 0 {
             durationInput.clear()
+            durationInput.isHidden = true
             onCustomMinutes?(Int(seconds))
         } else {
             durationInput.showError()
@@ -110,15 +176,12 @@ final class PanelView: NSView {
             tint.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
 
-        cupIcon.image = symbolImage(["cup.and.saucer", "mug"])?
-            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 12, weight: .semibold))
-        cupIcon.contentTintColor = .secondaryLabelColor
+        cupIcon.image = matchaMark(size: 18)
         cupIcon.translatesAutoresizingMaskIntoConstraints = false
-        cupIcon.widthAnchor.constraint(equalToConstant: 16).isActive = true
-        cupIcon.heightAnchor.constraint(equalToConstant: 16).isActive = true
+        cupIcon.widthAnchor.constraint(equalToConstant: 18).isActive = true
+        cupIcon.heightAnchor.constraint(equalToConstant: 18).isActive = true
 
-        let titleLabel = NSTextField(labelWithString: "Matcha")
-        titleLabel.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
+        titleLabel.font = NSFont.systemFont(ofSize: 13.5, weight: .bold)
 
         gear.image = symbolImage(["gearshape", "gear"])
         gear.isBordered = false
@@ -145,27 +208,27 @@ final class PanelView: NSView {
         ring.setAccessibilityRole(.button)
         ring.setAccessibilityLabel("Start or stop Matcha")
         ring.translatesAutoresizingMaskIntoConstraints = false
-        ring.widthAnchor.constraint(equalToConstant: 128).isActive = true
-        ring.heightAnchor.constraint(equalToConstant: 128).isActive = true
+        ring.widthAnchor.constraint(equalToConstant: 124).isActive = true
+        ring.heightAnchor.constraint(equalToConstant: 124).isActive = true
 
-        statusLabel.font = NSFont.systemFont(ofSize: 15, weight: .semibold)
+        statusLabel.font = NSFont.systemFont(ofSize: 16, weight: .semibold)
         statusLabel.alignment = .center
         statusLabel.widthAnchor.constraint(equalToConstant: inner).isActive = true
 
-        detailLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 11.5, weight: .regular)
+        detailLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
         detailLabel.textColor = .secondaryLabelColor
         detailLabel.alignment = .center
         detailLabel.lineBreakMode = .byTruncatingTail
         detailLabel.widthAnchor.constraint(equalToConstant: inner).isActive = true
 
         let chipSpecs: [(String, Int)] = [
-            ("2h", 7200), ("4h", 14400), ("8h", 28800), ("\u{221E}", 0),
+            ("2h", 7200), ("4h", 14400), ("\u{221E}", 0), ("Custom", 9999),
         ]
         presetChips = chipSpecs.map { chip($0.0, tag: $0.1) }
         let chips = NSStackView(views: presetChips)
         chips.orientation = .horizontal
         chips.distribution = .fillEqually
-        chips.spacing = 6
+        chips.spacing = 8
         chips.widthAnchor.constraint(equalToConstant: inner).isActive = true
 
         activityDot.image = symbolImage(["circle.fill"])?
@@ -175,32 +238,52 @@ final class PanelView: NSView {
         activityDot.widthAnchor.constraint(equalToConstant: 8).isActive = true
         activityDot.heightAnchor.constraint(equalToConstant: 8).isActive = true
 
-        activityLabel.font = NSFont.systemFont(ofSize: 10.5)
+        activityLabel.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
         activityLabel.textColor = .tertiaryLabelColor
+        activityLabel.lineBreakMode = .byTruncatingTail
 
-        let activityRow = NSStackView(views: [activityDot, activityLabel])
+        cursorLabel.font = NSFont(name: "Menlo-Regular", size: 11) ?? NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+        cursorLabel.textColor = brightGreen
+        cursorLabel.alphaValue = 0
+
         activityRow.orientation = .horizontal
         activityRow.alignment = .centerY
         activityRow.spacing = 5
+        activityRow.edgeInsets = NSEdgeInsets(top: 4, left: 9, bottom: 4, right: 10)
+        activityRow.addArrangedSubview(activityDot)
+        activityRow.addArrangedSubview(activityLabel)
+        activityRow.addArrangedSubview(cursorLabel)
+        activityRow.wantsLayer = true
+        activityRow.layer?.cornerRadius = 10
+        activityRow.layer?.backgroundColor = NSColor.quaternaryLabelColor.withAlphaComponent(0.5).cgColor
+
+        let separator = NSView()
+        separator.wantsLayer = true
+        separator.layer?.backgroundColor = NSColor.separatorColor.withAlphaComponent(0.6).cgColor
+        separator.translatesAutoresizingMaskIntoConstraints = false
+        separator.widthAnchor.constraint(equalToConstant: inner).isActive = true
+        separator.heightAnchor.constraint(equalToConstant: 1).isActive = true
 
         durationInput.onSubmit = { [weak self] text in
             self?.handleDuration(text)
         }
         durationInput.heightAnchor.constraint(equalToConstant: 30).isActive = true
         durationInput.widthAnchor.constraint(equalToConstant: inner).isActive = true
+        durationInput.isHidden = true
 
         let stack = NSStackView()
         stack.orientation = .vertical
         stack.alignment = .centerX
         stack.spacing = 0
         stack.translatesAutoresizingMaskIntoConstraints = false
-        [header, ring, statusLabel, detailLabel, activityRow, chips, durationInput].forEach { stack.addArrangedSubview($0) }
-        stack.setCustomSpacing(14, after: header)
-        stack.setCustomSpacing(12, after: ring)
-        stack.setCustomSpacing(3, after: statusLabel)
-        stack.setCustomSpacing(6, after: detailLabel)
-        stack.setCustomSpacing(12, after: activityRow)
-        stack.setCustomSpacing(8, after: chips)
+        [header, ring, statusLabel, detailLabel, chips, durationInput, separator, activityRow].forEach { stack.addArrangedSubview($0) }
+        stack.setCustomSpacing(16, after: header)
+        stack.setCustomSpacing(16, after: ring)
+        stack.setCustomSpacing(5, after: statusLabel)
+        stack.setCustomSpacing(16, after: detailLabel)
+        stack.setCustomSpacing(28, after: chips)
+        stack.setCustomSpacing(14, after: durationInput)
+        stack.setCustomSpacing(12, after: separator)
 
         addSubview(stack)
         NSLayoutConstraint.activate([
@@ -222,13 +305,13 @@ final class PanelView: NSView {
         button.fillColor = .quaternaryLabelColor
         button.hoverColor = .tertiaryLabelColor
         button.textColor = .labelColor
-        button.textFont = NSFont.systemFont(ofSize: 11, weight: .medium)
-        button.heightAnchor.constraint(equalToConstant: 30).isActive = true
+        button.textFont = NSFont.systemFont(ofSize: 11.5, weight: .medium)
+        button.heightAnchor.constraint(equalToConstant: 32).isActive = true
         switch tag {
         case 0: button.toolTip = "Keep awake until stopped"
         case 7200: button.toolTip = "Keep awake for 2 hours"
         case 14400: button.toolTip = "Keep awake for 4 hours"
-        case 28800: button.toolTip = "Keep awake for 8 hours"
+        case 9999: button.toolTip = "Type a custom duration"
         default: break
         }
         return button
@@ -252,8 +335,10 @@ final class TintView: NSView {
     private func build() {
         wantsLayer = true
         gradient.frame = bounds
-        gradient.opacity = 0
+        gradient.opacity = 1
         layer?.addSublayer(gradient)
+        gradient.startPoint = CGPoint(x: 0.5, y: 0)
+        gradient.endPoint = CGPoint(x: 0.5, y: 1)
         updateColors()
     }
 
@@ -270,21 +355,36 @@ final class TintView: NSView {
     func setActive(_ value: Bool) {
         guard value != active else { return }
         active = value
-        CATransaction.begin()
-        CATransaction.setAnimationDuration(0.28)
-        CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeInEaseOut))
-        gradient.opacity = value ? 1 : 0
-        CATransaction.commit()
+        updateColors(animated: true)
     }
 
-    private func updateColors() {
-        let dark = effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-        gradient.colors = [
-            Matcha.green.withAlphaComponent(dark ? 0.20 : 0.16).cgColor,
-            Matcha.green.withAlphaComponent(dark ? 0.06 : 0.04).cgColor,
-        ]
-        gradient.startPoint = CGPoint(x: 0.5, y: 0)
-        gradient.endPoint = CGPoint(x: 0.5, y: 1)
+    private func palette() -> [CGColor] {
+        if active {
+            let dark = effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            let top = NSColor(calibratedRed: 0.22, green: 0.56, blue: 0.34, alpha: dark ? 0.36 : 0.28)
+            let bottom = NSColor(calibratedRed: 0.19, green: 0.53, blue: 0.44, alpha: dark ? 0.14 : 0.10)
+            return [top.cgColor, bottom.cgColor]
+        } else {
+            let dark = effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            let top = NSColor(calibratedRed: 0.52, green: 0.62, blue: 0.74, alpha: dark ? 0.14 : 0.10)
+            let bottom = NSColor(calibratedRed: 0.52, green: 0.62, blue: 0.74, alpha: dark ? 0.03 : 0.02)
+            return [top.cgColor, bottom.cgColor]
+        }
+    }
+
+    private func updateColors(animated: Bool = false) {
+        let colors = palette()
+        if animated {
+            CATransaction.begin()
+            CATransaction.setAnimationDuration(0.3)
+            CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeInEaseOut))
+            gradient.colors = colors
+            CATransaction.commit()
+        } else {
+            CATransaction.setDisableActions(true)
+            gradient.colors = colors
+            CATransaction.setDisableActions(false)
+        }
     }
 
     override func viewDidChangeEffectiveAppearance() {

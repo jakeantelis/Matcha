@@ -9,8 +9,8 @@ final class DurationInputView: NSView, NSTextFieldDelegate {
     private var focused = false
     private var invalid = false
 
-    private static let placeholder = "Duration \u{2014} 90m, 2h, 1d"
-    private static let invalidPlaceholder = "Try 90m, 2h, or 1:30"
+    private static let placeholder = "Duration \u{2014} 8h, 90m, 2 hours"
+    private static let invalidPlaceholder = "Try 90m, 2h, or 2 hours"
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -22,6 +22,10 @@ final class DurationInputView: NSView, NSTextFieldDelegate {
     func clear() {
         field.stringValue = ""
         setInvalid(false)
+    }
+
+    func focus() {
+        window?.makeFirstResponder(field)
     }
 
     func showError() {
