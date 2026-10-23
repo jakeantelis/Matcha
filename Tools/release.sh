@@ -47,7 +47,7 @@ fi
 
 mkdir -p "$DIST"
 rm -f "$DIST/Matcha.zip" "$DIST/Matcha.zip.sha256"
-ditto -c -k --keepParent "$APP" "$DIST/Matcha.zip"
+ditto -c -k --norsrc --noextattr --keepParent "$APP" "$DIST/Matcha.zip"
 (cd "$DIST" && shasum -a 256 Matcha.zip > Matcha.zip.sha256)
 echo "Packaged $DIST/Matcha.zip ($VERSION)"
 cat "$DIST/Matcha.zip.sha256"
