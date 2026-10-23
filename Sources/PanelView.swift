@@ -110,7 +110,7 @@ final class PanelView: NSView {
             ? NSColor(calibratedRed: 0.05, green: 0.09, blue: 0.07, alpha: 0.92).cgColor
             : NSColor.quaternaryLabelColor.withAlphaComponent(0.5).cgColor
 
-        statusLabel.stringValue = state.active ? "Steeping · display unlocked" : "Sleep allowed"
+        statusLabel.stringValue = state.active ? "Awake · display unlocked" : "Sleep allowed"
         if state.active {
             detailLabel.stringValue = state.endDate != nil ? Fmt.remainingText(state) : "Until you stop"
         } else {
