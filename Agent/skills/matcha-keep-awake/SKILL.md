@@ -1,12 +1,19 @@
 ---
 name: matcha-keep-awake
-description: Keep a Mac awake during long builds, test suites, downloads, or agent tasks with Matcha's matchactl CLI, then stop the session afterwards. Use on macOS before any command likely to run longer than a few minutes.
+description: Keep a Mac awake during long builds, test suites, downloads, or agent tasks with Matcha's matchactl CLI, then stop the session afterwards. Works with Claude Code, Codex, opencode, Cursor, Windsurf, Gemini CLI, Aider, Zed, and any agent that can run shell commands. Use on macOS before any command likely to run longer than a few minutes.
 ---
 
 # Matcha keep-awake
 
 Use Matcha when a long-running command could be interrupted by the Mac sleeping
 or locking. It prevents idle sleep, display sleep, and the screen saver.
+
+## Compatibility
+
+- Claude Code and opencode install this skill directly.
+- Codex CLI, Gemini CLI, Cursor, Windsurf, Aider, Zed, and other agents can use
+  the equivalent snippet in `Agent/AGENTS.md`. If this skill is not available,
+  follow the same rules with the CLI below.
 
 ## Command
 
