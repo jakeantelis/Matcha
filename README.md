@@ -7,8 +7,8 @@ A minimalist macOS menu bar / desktop app that keeps your Mac awake — no trigg
 - **Type a duration** — "8", "2.5h", "1d", "2h 30m" all work (bare numbers are treated as hours)
 - **Floating indicator** — a draggable, translucent circle showing the remaining time; right-click (or click) it for quick control: stop, +1h / +4h, set duration
 - **Optional menu bar icon** with the same controls
-- **Auto-keep awake for code** — watches for real build/agent processes (`xcodebuild`, `swiftc`, `opencode`, `claude`, `cargo`, `ffmpeg`, …) and sustained high CPU; if you step away (3+ min idle) while something is running, it offers to keep the Mac awake via a notification
-- Keep display on (in addition to preventing system sleep)
+- **Auto-keep awake for code** — watches for real build/encode tools (`xcodebuild`, `swiftc`, `clang`, `make`, `cmake`, `ninja`, `cargo`, `rustc`, `go`, `zig`, `ffmpeg`, …) and sustained high CPU; if you step away (3+ min idle) while something is running, it offers to keep the Mac awake via a notification. Idle AI-assistant apps are deliberately ignored; agents should report long jobs via `matchactl on <duration>`.
+- Keep display on and prevent the screen saver / lock screen (in addition to preventing system sleep)
 - Launch at login, light/dark/system appearance
 - **Automation** — CLI + `matcha://` URL scheme so scripts or AI agents can query and control it
 

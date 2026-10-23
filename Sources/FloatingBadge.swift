@@ -28,6 +28,7 @@ final class FloatingBadge: NSPanel {
 
         badgeView.frame = NSRect(x: 0, y: 0, width: side, height: side)
         badgeView.autoresizingMask = [.width, .height]
+        badgeView.toolTip = "Click for controls \u{00B7} Drag to move"
         badgeView.onClick = { [weak self] in self?.onClick?() }
         badgeView.onRightClick = { [weak self] in self?.onRightClick?() }
         badgeView.onMoved = { [weak self] origin in self?.setFrameOrigin(origin) }
@@ -62,6 +63,35 @@ final class BadgeView: NSView {
     private var progress: CGFloat = 0
     private var dragOffset: NSPoint?
     private var movedDuringDrag = false
+    private var hovering = false
+    private var tracking: NSTrackingArea?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let tracking { removeTrackingArea(tracking) }
+        let area = NSTrackingArea(
+            rect: bounds,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(area)
+        tracking = area
+    }
+
+    override func resetCursorRects() {
+        addCursorRect(bounds, cursor: .pointingHand)
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        hovering = true
+        needsDisplay = true
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        hovering = false
+        needsDisplay = true
+    }
 
     override func draw(_ dirtyRect: NSRect) {
         let diameter = min(bounds.width, bounds.height)
@@ -71,14 +101,28 @@ final class BadgeView: NSView {
             width: diameter,
             height: diameter
         )
-        let circle = base.insetBy(dx: 2, dy: 2)
+        let circle = base.insetBy(dx: 6, dy: 6)
 
-        let fillAlpha: CGFloat = translucent ? 0.55 : 0.97
+        let fillAlpha: CGFloat = (translucent ? 0.55 : 0.97) + (hovering ? 0.08 : 0)
         let path = NSBezierPath(ovalIn: circle)
         NSColor.controlBackgroundColor.withAlphaComponent(fillAlpha).setFill()
         path.fill()
 
-        (active ? NSColor.controlAccentColor.withAlphaComponent(0.6) : NSColor.separatorColor).setStroke()
+        if hovering {
+            let glow = NSBezierPath(ovalIn: circle.insetBy(dx: -3, dy: -3))
+            let glowColor = active ? Matcha.green : NSColor.controlAccentColor
+            glowColor.withAlphaComponent(0.22).setStroke()
+            glow.lineWidth = 3
+            glow.stroke()
+        }
+
+        let borderColor: NSColor
+        if active {
+            borderColor = NSColor.controlAccentColor.withAlphaComponent(hovering ? 0.85 : 0.6)
+        } else {
+            borderColor = hovering ? NSColor.tertiaryLabelColor : NSColor.separatorColor
+        }
+        borderColor.setStroke()
         path.lineWidth = 1
         path.stroke()
 
