@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 import IOKit.pwr_mgt
 import ServiceManagement
 import UserNotifications
@@ -12,6 +13,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private var windowPanel: PanelView?
     private var badge: FloatingBadge?
     private let triggers = TriggerMonitor()
+    private let hotKeys = HotKeyManager()
     private var triggerBusy = false
     private var pendingShowWorkItem: DispatchWorkItem?
 
@@ -24,6 +26,8 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private var displayKeepAlive: Timer?
     private var caffeinateProcess: Process?
     private var batteryTimer: Timer?
+    private var warnedEnding = false
+    private var hotKeysRegistered = false
 
     func applicationWillTerminate(_ notification: Notification) {
         clearPersistedSession()
@@ -58,6 +62,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         }
         triggers.onAwayWhileBusy = { [weak self] in self?.offerKeepAwake() }
         setupNotifications()
+        registerHotKeys()
 
         createWindow()
         applyPreferences()
@@ -115,14 +120,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             toggleActive()
         case "extend":
             let seconds = requestedTime() ?? 3600
-            if active, endDate != nil {
-                endDate = endDate!.addingTimeInterval(seconds)
-                duration = duration.map { $0 + seconds }
-                persistSession()
-                refreshAll()
-            } else {
-                start(duration: seconds)
-            }
+            extend(by: seconds)
         default:
             break
         }
@@ -142,8 +140,27 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             intentIdentifiers: [],
             options: []
         )
-        center.setNotificationCategories([category])
+        let addHour = UNNotificationAction(identifier: "ADD_HOUR", title: "Add 1 Hour", options: [])
+        let stopSession = UNNotificationAction(identifier: "STOP_SESSION", title: "Stop", options: [])
+        let ending = UNNotificationCategory(
+            identifier: "ENDING",
+            actions: [addHour, stopSession],
+            intentIdentifiers: [],
+            options: []
+        )
+        center.setNotificationCategories([category, ending])
         center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    private func registerHotKeys() {
+        let modifiers = UInt32(controlKey | optionKey | cmdKey)
+        let toggleOK = hotKeys.register(keyCode: UInt32(kVK_ANSI_M), modifiers: modifiers) { [weak self] in
+            self?.toggleActive()
+        }
+        let startOK = hotKeys.register(keyCode: UInt32(kVK_ANSI_1), modifiers: modifiers) { [weak self] in
+            self?.start(duration: 3600)
+        }
+        hotKeysRegistered = toggleOK && startOK
     }
 
     private func offerKeepAwake() {
@@ -162,9 +179,22 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        if response.actionIdentifier == "KEEP_AWAKE"
-            || response.actionIdentifier == UNNotificationDefaultActionIdentifier {
+        if response.actionIdentifier == "KEEP_AWAKE" {
             start(duration: nil)
+            NSApp.activate(ignoringOtherApps: true)
+            showWindow()
+        } else if response.actionIdentifier == "ADD_HOUR" {
+            if active, endDate != nil {
+                extend(by: 3600)
+            } else {
+                start(duration: 3600)
+            }
+        } else if response.actionIdentifier == "STOP_SESSION" {
+            stop()
+        } else if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
+            if response.notification.request.content.categoryIdentifier == "AWAY" {
+                start(duration: nil)
+            }
             NSApp.activate(ignoringOtherApps: true)
             showWindow()
         }
@@ -212,6 +242,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             "remaining": endDate.map { max(0, Int($0.timeIntervalSinceNow.rounded())) } ?? -1,
             "duration": duration.map { Int($0) } ?? -1,
             "trigger": triggerBusy,
+            "hotkeys": hotKeysRegistered,
         ]
 
         guard let data = try? PropertyListSerialization.data(
@@ -318,6 +349,8 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
             button.image = symbolImage(["mug", "cup.and.saucer"])
+            button.imagePosition = .imageLeading
+            button.font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
             button.action = #selector(statusClicked)
             button.target = self
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -414,6 +447,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             menu.addItem(toggleItem("Low Battery Guard", Pref.batteryGuard, #selector(toggleBatteryGuard(_:))))
         }
         menu.addItem(toggleItem("Show in Menu Bar", Pref.showMenuBarIcon, #selector(toggleMenuBarIcon(_:))))
+        menu.addItem(toggleItem("Show Time in Menu Bar", Pref.menuBarCountdown, #selector(toggleMenuBarCountdown(_:))))
         menu.addItem(toggleItem("Show Floating Indicator", Pref.showFloatingIndicator, #selector(toggleFloatingIndicator(_:))))
         menu.addItem(toggleItem("Translucent Indicator", Pref.translucentIndicator, #selector(toggleTranslucent(_:))))
 
@@ -485,14 +519,19 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
 
     @objc private func addTime(_ sender: NSMenuItem) {
         guard let seconds = sender.representedObject as? TimeInterval else { return }
-        if active, endDate != nil {
-            endDate = endDate!.addingTimeInterval(seconds)
-            duration = duration.map { $0 + seconds }
-            persistSession()
-            refreshAll()
-        } else {
+        extend(by: seconds)
+    }
+
+    private func extend(by seconds: TimeInterval) {
+        guard active, endDate != nil else {
             start(duration: seconds)
+            return
         }
+        endDate = endDate!.addingTimeInterval(seconds)
+        duration = duration.map { $0 + seconds }
+        warnedEnding = false
+        persistSession()
+        refreshAll()
     }
 
     @objc private func setDurationFromMenu(_ sender: NSMenuItem) {
@@ -521,6 +560,12 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         let value = !UserDefaults.standard.bool(forKey: Pref.showMenuBarIcon)
         UserDefaults.standard.set(value, forKey: Pref.showMenuBarIcon)
         applyPreferences()
+    }
+
+    @objc private func toggleMenuBarCountdown(_ sender: NSMenuItem) {
+        let value = !UserDefaults.standard.bool(forKey: Pref.menuBarCountdown)
+        UserDefaults.standard.set(value, forKey: Pref.menuBarCountdown)
+        updateStatusItem()
     }
 
     @objc private func toggleFloatingIndicator(_ sender: NSMenuItem) {
@@ -604,6 +649,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         }
         duration = seconds
         endDate = seconds.map { Date().addingTimeInterval($0) }
+        warnedEnding = false
         startTicker()
         startBatteryGuard()
         persistSession()
@@ -619,6 +665,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         ticker = nil
         endDate = nil
         duration = nil
+        warnedEnding = false
         stopBatteryGuard()
         clearPersistedSession()
         refreshAll()
@@ -633,12 +680,43 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
 
     private func tick() {
         guard active, let end = endDate else { return }
-        if end.timeIntervalSinceNow <= 0 {
+        let remaining = end.timeIntervalSinceNow
+        if remaining <= 0 {
             stop()
             NSSound.beep()
             return
         }
+        if remaining <= 300, !warnedEnding {
+            warnedEnding = true
+            warnSessionEnding()
+        }
         refreshAll()
+    }
+
+    private func warnSessionEnding() {
+        if triggerBusy {
+            endDate = endDate?.addingTimeInterval(1800)
+            duration = duration.map { $0 + 1800 }
+            warnedEnding = false
+            persistSession()
+            let content = UNMutableNotificationContent()
+            content.title = "Still working — extended 30 minutes"
+            content.body = "A build is still running, so Matcha is keeping your Mac awake."
+            content.sound = .default
+            UNUserNotificationCenter.current().add(
+                UNNotificationRequest(identifier: "matcha.extended", content: content, trigger: nil)
+            )
+            return
+        }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Matcha stops in 5 minutes"
+        content.body = "Add an hour or stop now."
+        content.categoryIdentifier = "ENDING"
+        content.sound = .default
+        UNUserNotificationCenter.current().add(
+            UNNotificationRequest(identifier: "matcha.ending", content: content, trigger: nil)
+        )
     }
 
     // MARK: - Session persistence
@@ -846,8 +924,9 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
                 : ["cup.and.saucer", "mug"]
         )
         button.contentTintColor = active ? Matcha.green : nil
-        if active, let end = endDate {
-            button.title = " " + Fmt.clock(end.timeIntervalSinceNow)
+        let showTime = UserDefaults.standard.bool(forKey: Pref.menuBarCountdown)
+        if active, showTime {
+            button.title = endDate.map { " " + Fmt.clock($0.timeIntervalSinceNow) } ?? " \u{221E}"
         } else {
             button.title = ""
         }
