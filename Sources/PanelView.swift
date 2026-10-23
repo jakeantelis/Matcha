@@ -15,6 +15,7 @@ final class PanelView: NSView {
     private let activityDot = NSImageView()
     private let activityLabel = NSTextField(labelWithString: "")
     private var presetChips: [PillButton] = []
+    private let tint = TintView()
 
     private let panelWidth: CGFloat = 280
     private let pad: CGFloat = 16
@@ -27,6 +28,7 @@ final class PanelView: NSView {
     required init?(coder: NSCoder) { fatalError() }
 
     func apply(state: MatchaState) {
+        tint.setActive(state.active)
         ring.active = state.active
         ring.accent = Matcha.green
 
@@ -68,6 +70,14 @@ final class PanelView: NSView {
 
     @objc private func gearClicked() { onMenu?(gear) }
 
+    func setTintEnabled(_ enabled: Bool) {
+        tint.isHidden = !enabled
+    }
+
+    override func cancelOperation(_ sender: Any?) {
+        window?.performClose(sender)
+    }
+
     @objc private func chipClicked(_ sender: NSButton) {
         onPreset?(sender.tag == 0 ? nil : TimeInterval(sender.tag))
     }
@@ -85,6 +95,15 @@ final class PanelView: NSView {
 
     private func build() {
         let inner = panelWidth - pad * 2
+
+        tint.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(tint)
+        NSLayoutConstraint.activate([
+            tint.topAnchor.constraint(equalTo: topAnchor),
+            tint.leadingAnchor.constraint(equalTo: leadingAnchor),
+            tint.trailingAnchor.constraint(equalTo: trailingAnchor),
+            tint.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
 
         cupIcon.image = symbolImage(["cup.and.saucer", "mug"])?
             .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 12, weight: .semibold))
@@ -117,6 +136,9 @@ final class PanelView: NSView {
         header.widthAnchor.constraint(equalToConstant: inner).isActive = true
 
         ring.onClick = { [weak self] in self?.onToggle?() }
+        ring.toolTip = "Start or stop Matcha"
+        ring.setAccessibilityRole(.button)
+        ring.setAccessibilityLabel("Start or stop Matcha")
         ring.translatesAutoresizingMaskIntoConstraints = false
         ring.widthAnchor.constraint(equalToConstant: 128).isActive = true
         ring.heightAnchor.constraint(equalToConstant: 128).isActive = true
@@ -125,7 +147,7 @@ final class PanelView: NSView {
         statusLabel.alignment = .center
         statusLabel.widthAnchor.constraint(equalToConstant: inner).isActive = true
 
-        detailLabel.font = NSFont.systemFont(ofSize: 11.5)
+        detailLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 11.5, weight: .regular)
         detailLabel.textColor = .secondaryLabelColor
         detailLabel.alignment = .center
         detailLabel.lineBreakMode = .byTruncatingTail
@@ -197,7 +219,71 @@ final class PanelView: NSView {
         button.textColor = .labelColor
         button.textFont = NSFont.systemFont(ofSize: 11, weight: .medium)
         button.heightAnchor.constraint(equalToConstant: 30).isActive = true
-        if tag == 0 { button.toolTip = "Keep awake until stopped" }
+        switch tag {
+        case 0: button.toolTip = "Keep awake until stopped"
+        case 7200: button.toolTip = "Keep awake for 2 hours"
+        case 14400: button.toolTip = "Keep awake for 4 hours"
+        case 28800: button.toolTip = "Keep awake for 8 hours"
+        default: break
+        }
         return button
+    }
+}
+
+final class TintView: NSView {
+    private let gradient = CAGradientLayer()
+    private var active = false
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        build()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        build()
+    }
+
+    private func build() {
+        wantsLayer = true
+        gradient.frame = bounds
+        gradient.opacity = 0
+        layer?.addSublayer(gradient)
+        updateColors()
+    }
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        gradient.frame = NSRect(origin: .zero, size: newSize)
+        CATransaction.commit()
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    func setActive(_ value: Bool) {
+        guard value != active else { return }
+        active = value
+        CATransaction.begin()
+        CATransaction.setAnimationDuration(0.28)
+        CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeInEaseOut))
+        gradient.opacity = value ? 1 : 0
+        CATransaction.commit()
+    }
+
+    private func updateColors() {
+        let dark = effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        gradient.colors = [
+            Matcha.green.withAlphaComponent(dark ? 0.20 : 0.16).cgColor,
+            Matcha.green.withAlphaComponent(dark ? 0.06 : 0.04).cgColor,
+        ]
+        gradient.startPoint = CGPoint(x: 0.5, y: 0)
+        gradient.endPoint = CGPoint(x: 0.5, y: 1)
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        updateColors()
     }
 }
