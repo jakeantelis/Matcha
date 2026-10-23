@@ -137,6 +137,20 @@ That adds `.cursor/rules/matcha-keep-awake.mdc` and appends the snippet to
 Agents start a session before long work and stop it afterwards, leaving any
 session you started yourself untouched.
 
+### Detected agents
+
+Matcha watches for these agents and offers to stay awake when one is running:
+Claude Code, Codex, opencode, Aider, Cursor, Gemini CLI, Windsurf, Continue,
+Copilot, Cline, Roo Code, Augment, Crush, Amp, Goose, Ollama, and Devin.
+
+If yours is missing, open the menu and choose **Add Coding Agent…**. You can also
+add process names to `~/Library/Application Support/Matcha/agents.txt`, one per
+line. Detection is local and never leaves your Mac.
+
+To add an agent to the built-in list for everyone, add it to
+`AgentRegistry.builtIn` in [`Sources/Support.swift`](Sources/Support.swift) and
+open a pull request.
+
 ## Updating
 
 Rerun the install command. Matcha quits, updates, reopens, and resumes a running

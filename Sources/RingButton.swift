@@ -137,18 +137,11 @@ final class RingButton: NSView {
         }
 
         if !active {
-            let cupConfig = NSImage.SymbolConfiguration(pointSize: 38, weight: .medium)
+            let cupConfig = NSImage.SymbolConfiguration(pointSize: 38, weight: .regular)
             if let cup = NSImage(systemSymbolName: "cup.and.saucer", accessibilityDescription: nil)?
                 .withSymbolConfiguration(cupConfig) {
-                tinted(cup, hovering ? NSColor.labelColor : NSColor.secondaryLabelColor).draw(in: NSRect(x: bounds.midX - cup.size.width / 2, y: bounds.midY - cup.size.height / 2, width: cup.size.width, height: cup.size.height))
+                tinted(cup, hovering ? NSColor.secondaryLabelColor : NSColor.tertiaryLabelColor).draw(in: NSRect(x: bounds.midX - cup.size.width / 2, y: bounds.midY - cup.size.height / 2, width: cup.size.width, height: cup.size.height))
             }
-            NSColor.tertiaryLabelColor.setFill()
-            let d1 = NSBezierPath(ovalIn: NSRect(x: bounds.midX + 18, y: bounds.midY - 14, width: 4, height: 4))
-            d1.fill()
-            let d2 = NSBezierPath(ovalIn: NSRect(x: bounds.midX + 25, y: bounds.midY - 19, width: 5, height: 5))
-            d2.fill()
-            let d3 = NSBezierPath(ovalIn: NSRect(x: bounds.midX + 33, y: bounds.midY - 25, width: 6, height: 6))
-            d3.fill()
             return
         }
 
