@@ -4,7 +4,7 @@ Keep your Mac awake — and your screen unlocked — while builds, tests, downlo
 or agent runs finish. A tiny macOS app with a floating timer, menu bar controls,
 global hotkeys, a CLI, and an agent skill.
 
-<p align="center"><img src="docs/shot-idle-card.png" width="280" alt="Matcha idle"> <img src="docs/shot-active-card.png" width="280" alt="Matcha active with green wash"></p>
+<p align="center"><img src="docs/shot-idle-card2.png" width="280" alt="Matcha idle"> <img src="docs/shot-active-card2.png" width="280" alt="Matcha active with green wash"></p>
 
 <img src="docs/demo.gif" width="320" alt="Matcha — keep your Mac awake">
 
