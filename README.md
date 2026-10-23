@@ -4,7 +4,7 @@ Keep your Mac awake — and your screen unlocked — while builds, tests, downlo
 or agent runs finish. A tiny macOS app with a floating timer, menu bar controls,
 global hotkeys, a CLI, and an agent skill.
 
-<img src="docs/screenshot.png" width="320" alt="Matcha main window">
+<img src="docs/demo.gif" width="320" alt="Matcha — keep your Mac awake">
 
 ![Release](https://img.shields.io/github/v/release/jakeantelis/Matcha) ![License](https://img.shields.io/github/license/jakeantelis/Matcha)
 
@@ -80,6 +80,7 @@ matchactl extend 1      # add an hour
 matchactl off
 matchactl toggle
 matchactl status        # -> on (3598s left) / coding activity: true
+matcha run -- npm test  # keep awake, run command, auto-stop
 ```
 
 The CLI lives inside the bundle, so it works without a PATH setup:

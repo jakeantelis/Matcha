@@ -1,0 +1,43 @@
+#!/bin/sh
+# matcha CLI wrapper
+
+MATCHA=""
+if [ -n "${MATCHA_BIN:-}" ]; then
+  MATCHA="$MATCHA_BIN"
+elif command -v matchactl >/dev/null 2>&1; then
+  MATCHA="$(command -v matchactl)"
+else
+  MATCHA="/Applications/Matcha.app/Contents/Resources/matchactl"
+fi
+
+if [ $# -eq 0 ]; then
+  "$MATCHA" status
+  exit $?
+fi
+
+cmd="$1"
+shift
+
+case "$cmd" in
+  run)
+    if [ $# -eq 0 ]; then
+      echo "usage: matcha run -- <command> [args...]" >&2
+      exit 1
+    fi
+    if [ "$1" = "--" ]; then shift; fi
+    "$MATCHA" on 4 >/dev/null 2>&1 || true
+    "$@"
+    rc=$?
+    "$MATCHA" off >/dev/null 2>&1 || true
+    exit $rc
+    ;;
+  on|off|toggle|status|extend|add)
+    if [ "$cmd" = "add" ]; then cmd="extend"; fi
+    if [ $# -eq 0 ]; then "$MATCHA" "$cmd"; else "$MATCHA" "$cmd" "$@"; fi
+    exit $?
+    ;;
+  *)
+    "$MATCHA" "$cmd" "$@"
+    exit $?
+    ;;
+esac

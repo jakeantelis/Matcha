@@ -4,6 +4,8 @@ final class FloatingBadge: NSPanel {
     var onClick: (() -> Void)?
     var onRightClick: (() -> Void)?
     var onMoved: ((NSPoint) -> Void)?
+    var onQuickAdd: ((TimeInterval) -> Void)?
+    var onStop: (() -> Void)?
 
     private let badgeView = BadgeView()
     private(set) var side: CGFloat
@@ -37,14 +39,8 @@ final class FloatingBadge: NSPanel {
         badgeView.frame = NSRect(x: 0, y: 0, width: side, height: side)
         badgeView.autoresizingMask = [.width, .height]
         badgeView.toolTip = "Click for controls \u{00B7} Drag to move"
-        badgeView.onClick = { [weak self] in self?.onClick?() }
-        badgeView.onRightClick = { [weak self] in self?.onRightClick?() }
-        badgeView.onMoved = { [weak self] origin in self?.setFrameOrigin(origin) }
-        badgeView.onDragEnded = { [weak self] in
-            guard let self else { return }
-            self.setFrameOrigin(NSPoint(x: self.frame.origin.x.rounded(), y: self.frame.origin.y.rounded()))
-            self.onMoved?(self.frame.origin)
-        }
+        badgeView.onQuickAdd = { [weak self] seconds in self?.onQuickAdd?(seconds) }
+        badgeView.onStop = { [weak self] in self?.onStop?() }
         contentView = badgeView
     }
 
@@ -73,6 +69,8 @@ final class BadgeView: NSView {
     var onRightClick: (() -> Void)?
     var onMoved: ((NSPoint) -> Void)?
     var onDragEnded: (() -> Void)?
+    var onQuickAdd: ((TimeInterval) -> Void)?
+    var onStop: (() -> Void)?
 
     var translucent: Bool = true { didSet { needsDisplay = true } }
 
@@ -216,6 +214,14 @@ final class BadgeView: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
+        if event.modifierFlags.contains(.option), active {
+            onStop?()
+            return
+        }
+        if event.clickCount == 2, active {
+            onQuickAdd?(1800)
+            return
+        }
         dragOffset = event.locationInWindow
         movedDuringDrag = false
     }
