@@ -9,7 +9,7 @@ final class DurationInputView: NSView, NSTextFieldDelegate {
     private var focused = false
     private var invalid = false
 
-    private static let placeholder = "How many hours?"
+    private static let placeholder = "Duration \u{2014} 90m, 2h, 1d"
     private static let invalidPlaceholder = "Try 90m, 2h, or 1:30"
 
     override init(frame frameRect: NSRect) {
@@ -89,7 +89,7 @@ final class DurationInputView: NSView, NSTextFieldDelegate {
         if invalid {
             NSColor.systemRed.withAlphaComponent(0.12).setFill()
         } else if focused {
-            NSColor.controlAccentColor.withAlphaComponent(0.14).setFill()
+            Matcha.green.withAlphaComponent(0.14).setFill()
         } else {
             NSColor.quaternaryLabelColor.setFill()
         }
@@ -97,7 +97,7 @@ final class DurationInputView: NSView, NSTextFieldDelegate {
 
         let strokeColor = invalid
             ? NSColor.systemRed
-            : (focused ? NSColor.controlAccentColor : NSColor.separatorColor)
+            : (focused ? Matcha.green : NSColor.separatorColor)
         strokeColor.setStroke()
         path.lineWidth = (focused || invalid) ? 1.5 : 1
         path.stroke()

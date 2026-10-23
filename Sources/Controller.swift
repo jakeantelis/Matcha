@@ -9,6 +9,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
     private var window: NSWindow?
+    private var windowTint: TintView?
     private var popoverPanel: PanelView?
     private var windowPanel: PanelView?
     private var badge: FloatingBadge?
@@ -282,6 +283,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
 
     private func createWindow() {
         let panel = PanelView()
+        panel.setTintEnabled(false)
         wire(panel)
         windowPanel = panel
 
@@ -313,6 +315,17 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         effect.blendingMode = .behindWindow
         effect.state = .active
         w.contentView = effect
+
+        let tint = TintView()
+        tint.translatesAutoresizingMaskIntoConstraints = false
+        effect.addSubview(tint)
+        NSLayoutConstraint.activate([
+            tint.topAnchor.constraint(equalTo: effect.topAnchor),
+            tint.leadingAnchor.constraint(equalTo: effect.leadingAnchor),
+            tint.trailingAnchor.constraint(equalTo: effect.trailingAnchor),
+            tint.bottomAnchor.constraint(equalTo: effect.bottomAnchor),
+        ])
+        windowTint = tint
 
         panel.translatesAutoresizingMaskIntoConstraints = false
         effect.addSubview(panel)
@@ -880,6 +893,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         )
         popoverPanel?.apply(state: state)
         windowPanel?.apply(state: state)
+        windowTint?.setActive(active)
         badge?.translucent = UserDefaults.standard.bool(forKey: Pref.translucentIndicator)
         badge?.update(state: state)
 
