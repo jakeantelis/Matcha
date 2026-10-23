@@ -32,7 +32,7 @@ final class FloatingBadge: NSPanel {
         backgroundColor = .clear
         hasShadow = true
         hidesOnDeactivate = false
-        isMovableByWindowBackground = false
+        isMovableByWindowBackground = true
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         becomesKeyOnlyIfNeeded = true
 
@@ -126,11 +126,10 @@ final class BadgeView: NSView {
         NSColor.controlBackgroundColor.withAlphaComponent(fillAlpha).setFill()
         path.fill()
 
-        let glowColor = active ? Matcha.green : NSColor.controlAccentColor
         if hovering {
             let glow = NSBezierPath(ovalIn: circle.insetBy(dx: -4 * scale, dy: -4 * scale))
             let g = NSGradient(colors: [
-                (active ? Matcha.green : NSColor.controlAccentColor).withAlphaComponent(0.28),
+                (active ? Matcha.green : NSColor.controlAccentColor).withAlphaComponent(0.22),
                 (active ? Matcha.green : NSColor.controlAccentColor).withAlphaComponent(0)
             ])
             g?.draw(in: glow.bounds, angle: -90)
@@ -179,6 +178,26 @@ final class BadgeView: NSView {
                 height: size.height
             ))
         } else {
+        if !active {
+            let cupConfig = NSImage.SymbolConfiguration(pointSize: 24 * scale, weight: .medium)
+            if let cup = NSImage(systemSymbolName: "cup.and.saucer", accessibilityDescription: nil)?
+                .withSymbolConfiguration(cupConfig) {
+                tinted(cup, hovering ? NSColor.labelColor : NSColor.secondaryLabelColor).draw(in: NSRect(
+                    x: bounds.midX - cup.size.width / 2,
+                    y: bounds.midY - cup.size.height / 2,
+                    width: cup.size.width,
+                    height: cup.size.height
+                ))
+            }
+            NSColor.tertiaryLabelColor.setFill()
+            let d1 = NSBezierPath(ovalIn: NSRect(x: bounds.midX + 12 * scale, y: bounds.midY - 8 * scale, width: 3 * scale, height: 3 * scale))
+            d1.fill()
+            let d2 = NSBezierPath(ovalIn: NSRect(x: bounds.midX + 16 * scale, y: bounds.midY - 10 * scale, width: 4 * scale, height: 4 * scale))
+            d2.fill()
+            let d3 = NSBezierPath(ovalIn: NSRect(x: bounds.midX + 21 * scale, y: bounds.midY - 13 * scale, width: 5 * scale, height: 5 * scale))
+            d3.fill()
+            return
+        }
             let names = active
                 ? ["cup.and.saucer.fill", "cup.and.saucer", "mug.fill", "mug"]
                 : ["cup.and.saucer", "mug"]
@@ -224,6 +243,8 @@ final class BadgeView: NSView {
             onQuickAdd?(1800)
             return
         }
+        // Let the panel handle dragging when movable
+        super.mouseDown(with: event)
         dragOffset = event.locationInWindow
         movedDuringDrag = false
     }

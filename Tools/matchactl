@@ -4,15 +4,25 @@ set -u
 STATUS_FILE="$HOME/Library/Application Support/Matcha/status.plist"
 
 usage() {
-    echo "usage: matchactl <on [hours] | off | toggle | extend <hours> | status>"
+    echo "usage: matchactl <on [hours] | off | toggle | extend <hours> | status> [--json]"
 }
 
-command="${1:-status}"
+json=false
+args=()
+for arg in "$@"; do
+    if [[ "$arg" == "--json" ]]; then
+        json=true
+    else
+        args+=("$arg")
+    fi
+done
+
+command="${args[1]:-status}"
 
 case "$command" in
     on)
-        if [[ -n "${2:-}" ]]; then
-            open -g "matcha://on?hours=$2"
+        if [[ -n "${args[2]:-}" ]]; then
+            open -g "matcha://on?hours=${args[2]}"
         else
             open -g "matcha://on"
         fi
@@ -24,21 +34,41 @@ case "$command" in
         open -g "matcha://toggle"
         ;;
     extend)
-        open -g "matcha://extend?hours=${2:-1}"
+        open -g "matcha://extend?hours=${args[2]:-1}"
         ;;
     status)
         if [[ ! -f "$STATUS_FILE" ]]; then
-            echo "Matcha status unavailable (app has not run yet)"
+            if [[ "$json" == "true" ]]; then
+                echo '{"active":false,"available":false}'
+            else
+                echo "Matcha status unavailable (app has not run yet)"
+            fi
             exit 1
         fi
         active=$(plutil -extract active raw -o - "$STATUS_FILE" 2>/dev/null || echo false)
         remaining=$(plutil -extract remaining raw -o - "$STATUS_FILE" 2>/dev/null || echo -1)
         trigger=$(plutil -extract trigger raw -o - "$STATUS_FILE" 2>/dev/null || echo false)
+        endDate=$(plutil -extract endDate raw -o - "$STATUS_FILE" 2>/dev/null || echo 0)
+        duration=$(plutil -extract duration raw -o - "$STATUS_FILE" 2>/dev/null || echo 0)
+        if [[ "$json" == "true" ]]; then
+            printf '{"active":%s,"remaining":%s,"endDate":%s,"duration":%s,"trigger":%s}\n' "$active" "$remaining" "$endDate" "$duration" "$trigger"
+            exit 0
+        fi
         if [[ "$active" == "true" ]]; then
             if [[ "$remaining" == "-1" ]]; then
                 echo "on (until stopped)"
             else
-                echo "on (${remaining}s left)"
+                mins=$(( remaining / 60 ))
+                secs=$(( remaining % 60 ))
+                if (( mins >= 60 )); then
+                    hrs=$(( mins / 60 ))
+                    m2=$(( mins % 60 ))
+                    printf "on (%dh %dm left)\n" "$hrs" "$m2"
+                elif (( mins > 0 )); then
+                    printf "on (%dm %ds left)\n" "$mins" "$secs"
+                else
+                    printf "on (%ds left)\n" "$secs"
+                fi
             fi
         else
             echo "off"

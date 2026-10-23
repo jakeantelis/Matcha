@@ -15,6 +15,13 @@ if [ $# -eq 0 ]; then
   exit $?
 fi
 
+# pass --json through
+for a in "$@"; do
+  case "$a" in
+    --json) "$MATCHA" "$@" ; exit $? ;;
+  esac
+done
+
 cmd="$1"
 shift
 
