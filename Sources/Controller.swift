@@ -273,6 +273,13 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
             keyEquivalent: ""
         )
+        let updates = NSMenuItem(
+            title: "Check for Updates\u{2026}",
+            action: #selector(checkForUpdates(_:)),
+            keyEquivalent: ""
+        )
+        updates.target = self
+        appMenu.addItem(updates)
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Hide Matcha", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         appMenu.addItem(.separator())
@@ -503,6 +510,15 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
 
         menu.addItem(.separator())
 
+        let hint = NSMenuItem(
+            title: "Hotkeys: \u{2303}\u{2325}\u{2318}M toggle \u{00B7} \u{2303}\u{2325}\u{2318}1 one hour",
+            action: nil,
+            keyEquivalent: ""
+        )
+        hint.isEnabled = false
+        menu.addItem(hint)
+        menu.addItem(.separator())
+
         let openItem = NSMenuItem(title: "Open Window", action: #selector(showWindow), keyEquivalent: "")
         openItem.target = self
         menu.addItem(openItem)
@@ -510,6 +526,66 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             NSMenuItem(title: "Quit Matcha", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         )
         return menu
+    }
+
+    private struct ReleaseInfo: Decodable {
+        let tag_name: String
+        let html_url: String
+    }
+
+    @objc private func checkForUpdates(_ sender: Any?) {
+        let current = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+        guard let url = URL(string: "https://api.github.com/repos/jakeantelis/Matcha/releases/latest") else { return }
+        var request = URLRequest(url: url)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 10
+
+        URLSession.shared.dataTask(with: request) { data, _, error in
+            DispatchQueue.main.async {
+                NSApp.activate(ignoringOtherApps: true)
+
+                if let data, let release = try? JSONDecoder().decode(ReleaseInfo.self, from: data) {
+                    let latest = release.tag_name.trimmingCharacters(in: CharacterSet(charactersIn: "vV"))
+                    if Self.isVersion(latest, newerThan: current) {
+                        let alert = NSAlert()
+                        alert.messageText = "Matcha \(latest) is available"
+                        alert.informativeText = "You have \(current). Rerun the install command to update, or download the new version."
+                        alert.addButton(withTitle: "Download")
+                        alert.addButton(withTitle: "Later")
+                        if alert.runModal() == .alertFirstButtonReturn,
+                           let page = URL(string: release.html_url) {
+                            NSWorkspace.shared.open(page)
+                        }
+                    } else {
+                        let alert = NSAlert()
+                        alert.messageText = "You\u{2019}re up to date"
+                        alert.informativeText = "Matcha \(current) is the latest version."
+                        alert.addButton(withTitle: "OK")
+                        alert.runModal()
+                    }
+                } else {
+                    let alert = NSAlert()
+                    alert.messageText = "Couldn\u{2019}t check for updates"
+                    alert.informativeText = error?.localizedDescription ?? "Check your connection and try again."
+                    alert.addButton(withTitle: "Open Releases")
+                    alert.addButton(withTitle: "OK")
+                    if alert.runModal() == .alertFirstButtonReturn {
+                        NSWorkspace.shared.open(URL(string: "https://github.com/jakeantelis/Matcha/releases")!)
+                    }
+                }
+            }
+        }.resume()
+    }
+
+    private static func isVersion(_ candidate: String, newerThan current: String) -> Bool {
+        let a = candidate.split(separator: ".").map { Int($0.prefix(while: { $0.isNumber })) ?? 0 }
+        let b = current.split(separator: ".").map { Int($0.prefix(while: { $0.isNumber })) ?? 0 }
+        for index in 0..<max(a.count, b.count) {
+            let left = index < a.count ? a[index] : 0
+            let right = index < b.count ? b[index] : 0
+            if left != right { return left > right }
+        }
+        return false
     }
 
     private func timeItem(_ title: String, seconds: TimeInterval) -> NSMenuItem {

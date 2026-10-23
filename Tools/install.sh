@@ -27,28 +27,12 @@ for arg in "$@"; do
     esac
 done
 
-TMP=$(mktemp -d)
-trap 'rm -rf "$TMP"' EXIT
-
-echo "Downloading Matcha..."
-curl -fsSL "$LATEST/Matcha.zip" -o "$TMP/Matcha.zip"
-curl -fsSL "$LATEST/Matcha.zip.sha256" -o "$TMP/Matcha.zip.sha256"
-
-EXPECTED=$(cut -d ' ' -f 1 "$TMP/Matcha.zip.sha256")
-ACTUAL=$(shasum -a 256 "$TMP/Matcha.zip" | cut -d ' ' -f 1)
-if [ "$EXPECTED" != "$ACTUAL" ]; then
-    echo "error: checksum mismatch, download may be corrupt" >&2
+OS=$(sw_vers -productVersion 2>/dev/null || echo "unknown")
+MAJOR=$(printf '%s' "$OS" | cut -d . -f 1)
+if [ "$MAJOR" != "unknown" ] && [ "$MAJOR" -lt 11 ] 2>/dev/null; then
+    echo "Matcha needs macOS 11 or newer. This Mac has $OS." >&2
     exit 1
 fi
-
-ditto -x -k "$TMP/Matcha.zip" "$TMP/unpacked"
-APP="$TMP/unpacked/Matcha.app"
-if [ ! -d "$APP" ] || [ ! -x "$APP/Contents/MacOS/Matcha" ]; then
-    echo "error: release archive did not contain Matcha.app" >&2
-    exit 1
-fi
-
-xattr -dr com.apple.quarantine "$APP" 2>/dev/null || true
 
 DEST="/Applications"
 if [ ! -w "$DEST" ]; then
@@ -56,8 +40,50 @@ if [ ! -w "$DEST" ]; then
     mkdir -p "$DEST"
 fi
 
+UPGRADE=0
+if [ -d "$DEST/Matcha.app" ]; then
+    UPGRADE=1
+fi
+
+WAS_ON=0
+MATCHACTL="$DEST/Matcha.app/Contents/Resources/matchactl"
+if [ -x "$MATCHACTL" ] && "$MATCHACTL" status 2>/dev/null | head -1 | grep -q '^on '; then
+    WAS_ON=1
+fi
+
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+
+echo "Downloading the latest release..."
+if ! curl -fsSL "$LATEST/Matcha.zip" -o "$TMP/Matcha.zip" \
+    || ! curl -fsSL "$LATEST/Matcha.zip.sha256" -o "$TMP/Matcha.zip.sha256"; then
+    echo "Couldn't download Matcha. Check your connection and try again." >&2
+    echo "Releases: https://github.com/$REPO/releases" >&2
+    exit 1
+fi
+
+EXPECTED=$(cut -d ' ' -f 1 "$TMP/Matcha.zip.sha256")
+ACTUAL=$(shasum -a 256 "$TMP/Matcha.zip" | cut -d ' ' -f 1)
+if [ "$EXPECTED" != "$ACTUAL" ]; then
+    echo "The download was corrupt (checksum mismatch). Please try again." >&2
+    exit 1
+fi
+
+ditto -x -k "$TMP/Matcha.zip" "$TMP/unpacked"
+APP="$TMP/unpacked/Matcha.app"
+if [ ! -d "$APP" ] || [ ! -x "$APP/Contents/MacOS/Matcha" ]; then
+    echo "The release archive did not contain Matcha.app. Please try again." >&2
+    exit 1
+fi
+
+xattr -dr com.apple.quarantine "$APP" 2>/dev/null || true
+
 if pgrep -x Matcha >/dev/null 2>&1; then
-    echo "Closing the running copy..."
+    if [ "$WAS_ON" = 1 ]; then
+        echo "Closing Matcha; your session will resume when it reopens."
+    else
+        echo "Closing the running copy..."
+    fi
     pkill -x Matcha 2>/dev/null || true
     tries=0
     while pgrep -x Matcha >/dev/null 2>&1 && [ "$tries" -lt 30 ]; do
@@ -75,7 +101,11 @@ ditto "$APP" "$DEST/Matcha.app"
 xattr -dr com.apple.quarantine "$DEST/Matcha.app" 2>/dev/null || true
 
 VERSION=$(defaults read "$DEST/Matcha.app/Contents/Info" CFBundleShortVersionString 2>/dev/null || echo "unknown")
-echo "Installed Matcha $VERSION at $DEST/Matcha.app"
+if [ "$UPGRADE" = 1 ]; then
+    echo "Updated Matcha to $VERSION."
+else
+    echo "Installed Matcha $VERSION."
+fi
 open "$DEST/Matcha.app"
 
 if [ "$AGENTS" = 1 ]; then
@@ -88,8 +118,12 @@ if [ "$AGENTS" = 1 ]; then
         curl -fsSL "$RAW_BASE/Tools/install-agent-kit.sh" -o "$TMP/install-agent-kit.sh"
         AGENT_SCRIPT="$TMP/install-agent-kit.sh"
     fi
-    sh "$AGENT_SCRIPT" || echo "warning: agent setup failed; run Tools/install-agent-kit.sh later" >&2
+    sh "$AGENT_SCRIPT" || echo "Agent setup skipped; run Tools/install-agent-kit.sh later." >&2
 fi
 
 echo
 echo "Done. Matcha is running."
+if [ "$WAS_ON" = 1 ]; then
+    echo "Your session resumed."
+fi
+echo "Start with the cup in the Dock, the menu bar, or Control-Option-Command-M."
