@@ -57,6 +57,7 @@ enum Matcha {
 
 enum Pref {
     static let showMenuBarIcon = "showMenuBarIcon"
+    static let menuBarCountdown = "menuBarCountdown"
     static let showFloatingIndicator = "showFloatingIndicator"
     static let translucentIndicator = "translucentIndicator"
     static let keepDisplayOn = "keepDisplayOn"
@@ -72,6 +73,7 @@ enum Pref {
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
             showMenuBarIcon: true,
+            menuBarCountdown: true,
             showFloatingIndicator: true,
             translucentIndicator: true,
             keepDisplayOn: true,

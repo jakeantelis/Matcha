@@ -13,6 +13,7 @@ mkdir -p "$TMP/arm64" "$TMP/x86_64" "$APP/Contents/MacOS" "$APP/Contents/Resourc
 FLAGS=(
     -O
     -framework AppKit
+    -framework Carbon
     -framework IOKit
     -framework ServiceManagement
     -framework UserNotifications

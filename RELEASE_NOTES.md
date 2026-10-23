@@ -1,4 +1,4 @@
-## Matcha 1.1.0
+## Matcha 1.2.0
 
 A minimalist macOS keep-awake app that also prevents the screen saver and lock
 screen, with first-class automation for scripts and AI agents.
@@ -6,10 +6,13 @@ screen, with first-class automation for scripts and AI agents.
 ### Highlights
 
 - Keeps the Mac awake and the display unlocked for a chosen duration or until stopped
-- Typed durations (`8`, `2.5h`, `1d`, `2h 30m`), presets, and a floating indicator you can resize
+- Typed durations (`8`, `2.5h`, `1d`, `2h 30m`), presets, and a resizable floating indicator
 - Auto-keep-awake for real build/encode tools
 - Low battery guard (laptops only)
 - Sessions survive crashes and force-quits; an intentional Quit ends them
+- Optional menu bar countdown
+- Global hotkeys: `⌃⌥⌘M` toggles, `⌃⌥⌘1` starts one hour
+- Five-minute ending warning with **Add 1 Hour** / **Stop**; auto-extends 30 minutes while a build is still running
 - CLI, `matcha://` URL scheme, and a status plist for agents
 - Agent skill for Claude Code and opencode
 
