@@ -81,10 +81,10 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
                 ("gptme", "gptme"), ("ra-aid", "ra-aid"), ("kodu", "kodu"),
                 ("openchamber", "openchamber"),
             ]
-            let editorApps: Set<String> = ["claude", "cursor", "windsurf", "copilot", "codex", "gemini"]
+            let editorApps: Set<String> = ["cursor", "windsurf", "copilot", "codex", "gemini"]
             let ignoredPaths = [
                 "/applications/chatgpt.app/", "/applications/gemini.app/",
-                "/applications/claude.app/", "/applications/cursor.app/",
+                "/applications/cursor.app/",
                 "/applications/windsurf.app/", "/.codex/", "/contents/frameworks/",
             ]
             var matchedKeys: [String] = []
@@ -471,7 +471,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
 
         let w = NSWindow(
             contentRect: NSRect(origin: .zero, size: contentSize),
-            styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -480,6 +480,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         w.titleVisibility = .hidden
         w.isMovableByWindowBackground = true
         w.isReleasedWhenClosed = false
+        w.minSize = contentSize
         w.delegate = self
         w.center()
 
