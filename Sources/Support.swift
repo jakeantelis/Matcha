@@ -23,6 +23,7 @@ enum Pref {
     static let keepDisplayOn = "keepDisplayOn"
     static let appearance = "appearance"
     static let badgeOrigin = "badgeOrigin"
+    static let badgeSize = "badgeSize"
     static let autoTriggers = "autoTriggers"
 
     static func registerDefaults() {
@@ -33,6 +34,7 @@ enum Pref {
             keepDisplayOn: true,
             appearance: "system",
             autoTriggers: true,
+            badgeSize: "medium",
         ])
     }
 }

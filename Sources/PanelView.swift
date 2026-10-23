@@ -28,7 +28,7 @@ final class PanelView: NSView {
 
     func apply(state: MatchaState) {
         ring.active = state.active
-        ring.accent = state.active ? Matcha.green : .controlAccentColor
+        ring.accent = Matcha.green
 
         var timed = false
         if state.active, let end = state.endDate, let total = state.duration, total > 0 {
