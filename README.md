@@ -1,18 +1,19 @@
 # Matcha
 
-Keep your Mac awake — and your screen unlocked — while builds, exports, tests,
-and AI coding agents run. A tiny macOS app with a floating timer, menu bar controls,
-global hotkeys, a CLI, and an agent skill.
+**Keep your Mac awake for builds, exports, and AI coding agents.**
 
-<p align="center"><img src="docs/shot-idle-card2.png" width="280" alt="Matcha idle"> <img src="docs/shot-active-card2.png" width="280" alt="Matcha active with green wash"></p>
+[![Release](https://img.shields.io/github/v/release/jakeantelis/Matcha)](https://github.com/jakeantelis/Matcha/releases) [![License](https://img.shields.io/github/license/jakeantelis/Matcha)](LICENSE)
 
-<img src="docs/demo.gif" width="320" alt="Matcha — keep your Mac awake">
+<p align="center">
+  <img src="docs/shot-idle-card2.png" width="260" alt="Matcha idle — ready to keep your Mac awake">
+  <img src="docs/shot-active-card2.png" width="260" alt="Matcha active — keeping your Mac awake">
+</p>
 
-![Release](https://img.shields.io/github/v/release/jakeantelis/Matcha) ![License](https://img.shields.io/github/license/jakeantelis/Matcha)
+<p align="center"><b>Works with</b> · Claude Code · Codex · Cursor · opencode · Aider · Gemini CLI · Windsurf</p>
 
-Most keep-awake tools only stop idle sleep. Matcha also keeps the display on and
-the lock screen away, restores timed sessions after a crash, and is scriptable so
-agents can report long jobs instead of holding your Mac awake forever.
+<p align="center"><img src="docs/demo.gif" width="320" alt="Matcha in action"></p>
+
+Tiny macOS app with a floating timer, menu bar controls, global hotkeys, CLI, and agent skill. Keeps your display on and lock screen away while builds, exports, or AI coding agents run. Crash-safe and scriptable.
 
 ## Install
 
