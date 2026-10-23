@@ -46,6 +46,39 @@ open -g "matcha://toggle"
 `-g` keeps Matcha in the background. Status is published to
 `~/Library/Application Support/Matcha/status.plist` for tooling.
 
+## Agent kit
+
+Matcha ships a skill that teaches Claude Code and opencode when to keep the Mac
+awake during long work:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/install-agent-kit.sh | sh
+```
+
+From a checkout, run `./Tools/install-agent-kit.sh`. It installs to
+`~/.claude/skills/matcha-keep-awake` and `~/.config/opencode/skills/matcha-keep-awake`;
+the source is [`Agent/skills/matcha-keep-awake/SKILL.md`](Agent/skills/matcha-keep-awake/SKILL.md).
+Agents start a session before long builds and stop it afterwards, leaving any
+session you started yourself untouched.
+
+If your agent has no skill support, add this to its instructions:
+
+> Before any build, test suite, or task likely to run longer than a few minutes,
+> run `matchactl on 2` (or `/Applications/Matcha.app/Contents/Resources/matchactl on 2`).
+> Run `matchactl off` when it finishes. If `matchactl status` says it is already
+> on, leave it alone.
+
+## Install a release
+
+```sh
+curl -fL https://github.com/jakeantelis/Matcha/releases/latest/download/Matcha.zip -o /tmp/Matcha.zip
+unzip -qo /tmp/Matcha.zip -d /Applications
+xattr -dr com.apple.quarantine /Applications/Matcha.app 2>/dev/null || true
+open /Applications/Matcha.app
+```
+
+Releases are universal binaries (Apple silicon + Intel).
+
 ## Requirements
 
 - macOS 11.0+
@@ -72,6 +105,16 @@ Other modes:
 ./build.sh build      # build only, into build/Matcha.app
 ./build.sh package    # build + create dist/Matcha.zip
 ```
+
+## Release (maintainers)
+
+```sh
+./Tools/release.sh            # universal build, dist/Matcha.zip + checksum
+./Tools/release.sh --publish  # same, then create the GitHub release
+```
+
+`--publish` requires the `gh` CLI and a pushed commit. Bump
+`CFBundleShortVersionString` in `Resources/Info.plist` first.
 
 ## Generate the app icon
 
