@@ -6,7 +6,9 @@ A minimalist macOS menu bar / desktop app that keeps your Mac awake — no trigg
 - **Presets** — 2h, 4h, 8h, ∞ (until you stop)
 - **Type a duration** — "8", "2.5h", "1d", "2h 30m" all work (bare numbers are treated as hours)
 - **Floating indicator** — a draggable, translucent circle showing the remaining time, adjustable size (Small / Medium / Large); right-click (or click) it for quick control: stop, +1h / +4h, set duration
-- **Optional menu bar icon** with the same controls
+- **Optional menu bar icon** with the same controls, plus an optional live countdown (or ∞) beside it
+- **Global hotkeys** — `⌃⌥⌘M` toggles, `⌃⌥⌘1` starts one hour
+- **Graceful ending** — a 5-minute warning with *Add 1 Hour* / *Stop*; auto-extends 30 minutes while a build is still running
 - **Auto-keep awake for code** — watches for real build/encode tools (`xcodebuild`, `swiftc`, `clang`, `make`, `cmake`, `ninja`, `cargo`, `rustc`, `go`, `zig`, `ffmpeg`, …) and sustained high CPU; if you step away (3+ min idle) while something is running, it offers to keep the Mac awake via a notification. Idle AI-assistant apps are deliberately ignored; agents should report long jobs via `matchactl on <duration>`.
 - Keep display on and prevent the screen saver / lock screen (in addition to preventing system sleep)
 - **Session restore** — if Matcha crashes or is force-quit, a timed session resumes with its remaining time on next launch (an intentional Quit ends it)
