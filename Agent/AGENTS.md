@@ -1,26 +1,25 @@
-# Matcha keep-awake
+# Matcha agent instructions
 
-Paste this into any agent instructions file: `AGENTS.md` (Codex CLI),
-`GEMINI.md` (Gemini CLI), `CONVENTIONS.md` (Aider), Cursor/Windsurf project
-rules, or a system prompt.
+The small, agent-agnostic snippet is in [`instructions.md`](instructions.md).
+It tells an agent to run `matchactl on <hours>` before long work and
+`matchactl off` afterwards, while leaving sessions the user started alone.
 
-```md
-## Keep the Mac awake for long work
+The installer adds it automatically where a stable instructions file exists:
 
-Before a build, test suite, download, model run, or any task likely to take more
-than a few minutes, start Matcha:
+| Agent | Target |
+| --- | --- |
+| Claude Code | `~/.claude/skills/matcha-keep-awake/SKILL.md` |
+| opencode | `~/.config/opencode/skills/matcha-keep-awake/SKILL.md` |
+| Codex CLI | `~/.codex/AGENTS.md` |
+| Gemini CLI | `~/.gemini/GEMINI.md` |
+| Windsurf | `~/.codeium/windsurf/memories/global_rules.md` |
 
-    matchactl on 2
+Cursor and Aider load rules per project, so run the installer inside the repo:
 
-Use `on 1`, `on 4`, or `on 8` to match the expected duration. If `matchactl
-status` says it is already on, leave it alone and do not extend a session the
-user started.
-
-When the work finishes and you started the session:
-
-    matchactl off
-
-If `matchactl` is not on PATH, use
-`/Applications/Matcha.app/Contents/Resources/matchactl`. If Matcha is not
-installed, continue the task without it; never block on keep-awake.
+```sh
+curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/install-agent-kit.sh | sh -s -- --project
 ```
+
+That writes `.cursor/rules/matcha-keep-awake.mdc` and appends the snippet to
+`CONVENTIONS.md`. For Zed or any other agent, paste `instructions.md` into its
+instructions or system prompt.
