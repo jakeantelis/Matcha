@@ -243,6 +243,7 @@ enum AgentRegistry {
         ("gptme", "gptme"),
         ("ra-aid", "RA.Aid"),
         ("kodu", "Kodu"),
+        ("openchamber", "OpenChamber"),
     ]
 
     static var builtInNames: Set<String> { Set(builtIn.map(\.name)) }
