@@ -2,6 +2,7 @@
 set -eu
 
 # Installs the Matcha keep-awake skill for Claude Code and opencode.
+# Other agents can use the snippet in Agent/AGENTS.md.
 # Safe to run repeatedly.
 
 SKILL="matcha-keep-awake"
@@ -26,5 +27,13 @@ for target in $TARGETS; do
 done
 
 echo
-echo "Restart your agent (Claude Code or opencode) to pick up the skill."
+echo "Restart Claude Code or opencode to pick up the skill."
 echo "It will call matchactl before long builds and stop the session afterwards."
+echo
+echo "Using Codex CLI, Gemini CLI, Cursor, Windsurf, Aider, Zed, or another agent?"
+echo "Copy the snippet from:"
+if [ -f "$SCRIPT_DIR/../Agent/AGENTS.md" ]; then
+    echo "  $SCRIPT_DIR/../Agent/AGENTS.md"
+else
+    echo "  $RAW_BASE/Agent/AGENTS.md"
+fi
