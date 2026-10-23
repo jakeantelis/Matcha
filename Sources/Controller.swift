@@ -75,6 +75,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
                 ("letta", "letta"), ("agent-zero", "agent-zero"), ("devika", "devika"),
                 ("trae", "trae"), ("replit", "replit"), ("deepseek", "deepseek"),
                 ("gptme", "gptme"), ("ra-aid", "ra-aid"), ("kodu", "kodu"),
+                ("openchamber", "openchamber"),
             ]
             let editorApps: Set<String> = ["claude", "cursor", "windsurf", "copilot", "codex", "gemini"]
             let ignoredPaths = [
