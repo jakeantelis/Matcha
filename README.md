@@ -25,6 +25,8 @@ This downloads the latest release, verifies its SHA-256, installs it to
 same command to update. Skip the agent setup with `| sh -s -- --no-agents`.
 
 Requires macOS 11 or later. Universal binary for Apple silicon and Intel.
+Allow notifications when macOS asks; that is how the five-minute warning and
+agent prompts reach you.
 
 <details>
 <summary>Manual install</summary>
@@ -124,6 +126,27 @@ That adds `.cursor/rules/matcha-keep-awake.mdc` and appends the snippet to
 
 Agents start a session before long work and stop it afterwards, leaving any
 session you started yourself untouched.
+
+## Updating
+
+Rerun the install command. Matcha quits, updates, reopens, and resumes a running
+session. You can also use **Matcha → Check for Updates…** in the app menu.
+
+## Uninstalling
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/uninstall.sh | sh
+```
+
+This removes the app and the instructions it added to coding agents. Add
+`-s -- --yes --purge` to skip the prompt and delete preferences and session data
+too. Cursor/Aider project rules are left for you to review and delete.
+
+## Privacy
+
+No accounts, analytics, or telemetry. The app makes one network request only
+when you choose **Check for Updates…**, and the installer contacts GitHub to
+download the release you asked for.
 
 ## Build from source
 
