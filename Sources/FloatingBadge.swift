@@ -6,12 +6,20 @@ final class FloatingBadge: NSPanel {
     var onMoved: ((NSPoint) -> Void)?
 
     private let badgeView = BadgeView()
-    private static let size: CGFloat = 96
+    private(set) var side: CGFloat
 
-    init() {
-        let side = Self.size
+    static func size(for name: String) -> CGFloat {
+        switch name {
+        case "small": return 76
+        case "large": return 128
+        default: return 96
+        }
+    }
+
+    init(size: CGFloat = 96) {
+        side = size
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: side, height: side),
+            contentRect: NSRect(x: 0, y: 0, width: size, height: size),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -42,6 +50,17 @@ final class FloatingBadge: NSPanel {
 
     var translucent: Bool = true {
         didSet { badgeView.translucent = translucent }
+    }
+
+    func resize(to newSide: CGFloat) {
+        guard newSide != side else { return }
+        let center = NSPoint(x: frame.midX, y: frame.midY)
+        side = newSide
+        var newFrame = frame
+        newFrame.size = NSSize(width: newSide, height: newSide)
+        newFrame.origin = NSPoint(x: center.x - newSide / 2, y: center.y - newSide / 2)
+        setFrame(newFrame, display: true)
+        badgeView.needsDisplay = true
     }
 
     func update(state: MatchaState) {
@@ -94,6 +113,7 @@ final class BadgeView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
+        let scale = max(0.5, bounds.width / 96)
         let diameter = min(bounds.width, bounds.height)
         let base = NSRect(
             x: (bounds.width - diameter) / 2,
@@ -101,7 +121,7 @@ final class BadgeView: NSView {
             width: diameter,
             height: diameter
         )
-        let circle = base.insetBy(dx: 6, dy: 6)
+        let circle = base.insetBy(dx: 6 * scale, dy: 6 * scale)
 
         let fillAlpha: CGFloat = (translucent ? 0.55 : 0.97) + (hovering ? 0.08 : 0)
         let path = NSBezierPath(ovalIn: circle)
@@ -109,26 +129,26 @@ final class BadgeView: NSView {
         path.fill()
 
         if hovering {
-            let glow = NSBezierPath(ovalIn: circle.insetBy(dx: -3, dy: -3))
+            let glow = NSBezierPath(ovalIn: circle.insetBy(dx: -3 * scale, dy: -3 * scale))
             let glowColor = active ? Matcha.green : NSColor.controlAccentColor
             glowColor.withAlphaComponent(0.22).setStroke()
-            glow.lineWidth = 3
+            glow.lineWidth = 3 * scale
             glow.stroke()
         }
 
         let borderColor: NSColor
         if active {
-            borderColor = NSColor.controlAccentColor.withAlphaComponent(hovering ? 0.85 : 0.6)
+            borderColor = Matcha.green.withAlphaComponent(hovering ? 0.9 : 0.65)
         } else {
             borderColor = hovering ? NSColor.tertiaryLabelColor : NSColor.separatorColor
         }
         borderColor.setStroke()
-        path.lineWidth = 1
+        path.lineWidth = max(1, scale)
         path.stroke()
 
         if active {
-            let lineWidth: CGFloat = 3.5
-            let radius = circle.width / 2 - lineWidth / 2 - 1.5
+            let lineWidth: CGFloat = 3.5 * scale
+            let radius = circle.width / 2 - lineWidth / 2 - 1.5 * scale
             let arc = NSBezierPath()
             let start: CGFloat = 90
             let end = start - 360 * max(0.02, min(1, progress))
@@ -141,13 +161,13 @@ final class BadgeView: NSView {
             )
             arc.lineWidth = lineWidth
             arc.lineCapStyle = .round
-            (timed ? Matcha.green : NSColor.controlAccentColor).setStroke()
+            Matcha.green.setStroke()
             arc.stroke()
         }
 
         if active, timed {
             let attributes: [NSAttributedString.Key: Any] = [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: 14, weight: .semibold),
+                .font: NSFont.monospacedDigitSystemFont(ofSize: 14 * scale, weight: .semibold),
                 .foregroundColor: NSColor.labelColor,
             ]
             let string = NSAttributedString(string: text, attributes: attributes)
@@ -163,7 +183,7 @@ final class BadgeView: NSView {
                 ? ["cup.and.saucer.fill", "cup.and.saucer", "mug.fill", "mug"]
                 : ["cup.and.saucer", "mug"]
             guard let base = symbolImage(names),
-                  let sized = base.withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 24, weight: .medium))
+                  let sized = base.withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 24 * scale, weight: .medium))
             else { return }
             let color = active ? Matcha.green : NSColor.secondaryLabelColor
             let image = tinted(sized, color)

@@ -42,7 +42,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         popover.behavior = .transient
         popover.contentViewController = vc
 
-        badge = FloatingBadge()
+        badge = FloatingBadge(size: FloatingBadge.size(for: UserDefaults.standard.string(forKey: Pref.badgeSize) ?? "medium"))
         badge?.onClick = { [weak self] in self?.presentBadgeMenu() }
         badge?.onRightClick = { [weak self] in self?.presentBadgeMenu() }
         badge?.onMoved = { origin in
@@ -404,6 +404,20 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         menu.addItem(toggleItem("Show Floating Indicator", Pref.showFloatingIndicator, #selector(toggleFloatingIndicator(_:))))
         menu.addItem(toggleItem("Translucent Indicator", Pref.translucentIndicator, #selector(toggleTranslucent(_:))))
 
+        let sizeItem = NSMenuItem(title: "Indicator Size", action: nil, keyEquivalent: "")
+        let sizeMenu = NSMenu()
+        let sizes: [(String, String)] = [("Small", "small"), ("Medium", "medium"), ("Large", "large")]
+        let currentSize = UserDefaults.standard.string(forKey: Pref.badgeSize) ?? "medium"
+        for (index, option) in sizes.enumerated() {
+            let item = NSMenuItem(title: option.0, action: #selector(setIndicatorSize(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = index
+            item.state = option.1 == currentSize ? .on : .off
+            sizeMenu.addItem(item)
+        }
+        sizeItem.submenu = sizeMenu
+        menu.addItem(sizeItem)
+
         if #available(macOS 13.0, *) {
             let login = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin(_:)), keyEquivalent: "")
             login.target = self
@@ -505,6 +519,28 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         let value = !UserDefaults.standard.bool(forKey: Pref.translucentIndicator)
         UserDefaults.standard.set(value, forKey: Pref.translucentIndicator)
         refreshAll()
+    }
+
+    @objc private func setIndicatorSize(_ sender: NSMenuItem) {
+        let names = ["small", "medium", "large"]
+        guard sender.tag >= 0, sender.tag < names.count else { return }
+        let name = names[sender.tag]
+        UserDefaults.standard.set(name, forKey: Pref.badgeSize)
+        guard let badge else { return }
+        badge.resize(to: FloatingBadge.size(for: name))
+        clampBadgeToScreen()
+    }
+
+    private func clampBadgeToScreen() {
+        guard let badge else { return }
+        let center = NSPoint(x: badge.frame.midX, y: badge.frame.midY)
+        let screen = NSScreen.screens.first { $0.frame.contains(center) } ?? NSScreen.main
+        guard let visible = screen?.visibleFrame else { return }
+        var origin = badge.frame.origin
+        origin.x = min(max(visible.minX + 8, origin.x), visible.maxX - badge.frame.width - 8)
+        origin.y = min(max(visible.minY + 8, origin.y), visible.maxY - badge.frame.height - 8)
+        badge.setFrameOrigin(origin)
+        UserDefaults.standard.set("\(origin.x),\(origin.y)", forKey: Pref.badgeOrigin)
     }
 
     @objc private func toggleLaunchAtLogin(_ sender: NSMenuItem) {
