@@ -1,6 +1,10 @@
 import AppKit
 import IOKit.ps
 
+extension Notification.Name {
+    static let matchaPrefsChanged = Notification.Name("matchaPrefsChanged")
+}
+
 enum Battery {
     struct Status {
         let onBattery: Bool
@@ -45,14 +49,14 @@ struct MatchaState {
     var duration: TimeInterval?
     var triggerBusy: Bool = false
     var agentRunning: Bool = false
-    var agentName: String?
+    var agentNames: [String] = []
 }
 
 enum Matcha {
     static let green = NSColor(
-        calibratedRed: 0.28,
-        green: 0.62,
-        blue: 0.36,
+        calibratedRed: 0.26,
+        green: 0.60,
+        blue: 0.30,
         alpha: 1
     )
 }
@@ -72,6 +76,12 @@ enum Pref {
     static let sessionDuration = "sessionDuration"
     static let autoTriggers = "autoTriggers"
     static let customAgents = "customAgents"
+    static let showTips = "showTips"
+    static let animations = "animations"
+    static let watchApps = "watchApps"
+    static let awakeTotal = "awakeTotal"
+    static let awakeToday = "awakeToday"
+    static let awakeTodayDate = "awakeTodayDate"
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -84,6 +94,8 @@ enum Pref {
             autoTriggers: true,
             badgeSize: "medium",
             batteryGuard: true,
+            showTips: true,
+            animations: true,
         ])
     }
 }
@@ -139,7 +151,10 @@ enum Fmt {
                 return nil
             }
 
-            // parse optional unit word
+            // parse optional unit word (allow a space after the number)
+            while pos < s.endIndex && s[pos].isWhitespace {
+                pos = s.index(after: pos)
+            }
             let unitStart = pos
             while pos < s.endIndex && s[pos].isLetter {
                 pos = s.index(after: pos)
@@ -163,6 +178,45 @@ enum Fmt {
         }
 
         return total > 0 ? total : nil
+    }
+
+    static func parseClockTime(_ text: String) -> Date? {
+        let cleaned = text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "a.m.", with: "am")
+            .replacingOccurrences(of: "p.m.", with: "pm")
+        guard !cleaned.isEmpty else { return nil }
+
+        var body = cleaned
+        var isPM = false
+        if body.hasSuffix("pm") { isPM = true; body.removeLast(2) }
+        else if body.hasSuffix("am") { body.removeLast(2) }
+
+        let parts = body.split(separator: ":").map(String.init)
+        var hour: Int
+        var minute = 0
+        if parts.count == 2, let h = Int(parts[0]), let m = Int(parts[1]) {
+            hour = h; minute = m
+        } else if parts.count == 1, let h = Int(parts[0]) {
+            hour = h
+        } else {
+            return nil
+        }
+        guard (0...23).contains(hour), (0...59).contains(minute) else { return nil }
+
+        if isPM, hour < 12 { hour += 12 }
+        if !isPM, hour == 12 { hour = 0 }
+
+        let cal = Calendar.current
+        var comps = cal.dateComponents([.year, .month, .day], from: Date())
+        comps.hour = hour
+        comps.minute = minute
+        comps.second = 0
+        guard var date = cal.date(from: comps) else { return nil }
+        if date <= Date() { date = date.addingTimeInterval(86400) }
+        return date
     }
 
     static func remainingText(_ state: MatchaState) -> String {
@@ -195,6 +249,33 @@ func tinted(_ image: NSImage, _ color: NSColor) -> NSImage {
     result.unlockFocus()
     result.isTemplate = false
     return result
+}
+
+func animationsEnabled() -> Bool {
+    UserDefaults.standard.bool(forKey: Pref.animations)
+        && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+}
+
+func matchaMark(size: CGFloat, active: Bool = true) -> NSImage {
+    let image = NSImage(size: NSSize(width: size, height: size))
+    image.lockFocus()
+    let r = size * 0.24
+    let bg = NSBezierPath(roundedRect: NSRect(x: 0, y: 0, width: size, height: size), xRadius: r, yRadius: r)
+    let grad = NSGradient(colors: active
+        ? [NSColor(srgbRed: 0.42, green: 0.74, blue: 0.52, alpha: 1),
+           NSColor(srgbRed: 0.22, green: 0.55, blue: 0.36, alpha: 1)]
+        : [NSColor(srgbRed: 0.72, green: 0.76, blue: 0.80, alpha: 1),
+           NSColor(srgbRed: 0.60, green: 0.65, blue: 0.69, alpha: 1)]
+    )
+    grad?.draw(in: bg, angle: -90)
+    if let cup = symbolImage(["cup.and.saucer.fill", "mug.fill", "mug"])?
+        .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: size * 0.50, weight: .semibold)) {
+        let white = tinted(cup, active ? .white : NSColor(srgbRed: 0.94, green: 0.95, blue: 0.96, alpha: 1))
+        white.draw(in: NSRect(x: (size - white.size.width) / 2, y: (size - white.size.height) / 2, width: white.size.width, height: white.size.height))
+    }
+    image.unlockFocus()
+    image.isTemplate = false
+    return image
 }
 
 

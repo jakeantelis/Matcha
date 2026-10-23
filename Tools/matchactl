@@ -104,10 +104,11 @@ case "$command" in
         trigger=$(plutil -extract trigger raw -o - "$STATUS_FILE" 2>/dev/null || echo false)
         agent=$(plutil -extract agent raw -o - "$STATUS_FILE" 2>/dev/null || echo false)
         agentName=$(plutil -extract agentName raw -o - "$STATUS_FILE" 2>/dev/null || echo "")
+        agentCount=$(plutil -extract agentCount raw -o - "$STATUS_FILE" 2>/dev/null || echo 0)
         endDate=$(plutil -extract endDate raw -o - "$STATUS_FILE" 2>/dev/null || echo 0)
         duration=$(plutil -extract duration raw -o - "$STATUS_FILE" 2>/dev/null || echo 0)
         if [[ "$json" == "true" ]]; then
-            printf '{"active":%s,"remaining":%s,"endDate":%s,"duration":%s,"trigger":%s,"agent":%s,"agentName":"%s"}\n' "$active" "$remaining" "$endDate" "$duration" "$trigger" "$agent" "$agentName"
+            printf '{"active":%s,"remaining":%s,"endDate":%s,"duration":%s,"trigger":%s,"agent":%s,"agentName":"%s","agentCount":%s}\n' "$active" "$remaining" "$endDate" "$duration" "$trigger" "$agent" "$agentName" "$agentCount"
             exit 0
         fi
         if [[ "$active" == "true" ]]; then
@@ -130,7 +131,7 @@ case "$command" in
             echo "off"
         fi
         echo "build/export activity: $trigger"
-        [[ "$agentName" != "" ]] && echo "coding agent: $agentName"
+        [[ "$agentName" != "" ]] && echo "coding agents: $agentName"
         ;;
     *)
         usage

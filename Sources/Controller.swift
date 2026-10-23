@@ -3,6 +3,7 @@ import Carbon.HIToolbox
 import IOKit.pwr_mgt
 import ServiceManagement
 import UserNotifications
+import CryptoKit
 
 final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuItemValidation, UNUserNotificationCenterDelegate {
 
@@ -17,7 +18,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private let hotKeys = HotKeyManager()
     private var triggerBusy = false
     private var agentRunning = false
-    private var agentName: String?
+    private var agentNames: [String] = []
     private var pendingShowWorkItem: DispatchWorkItem?
 
     private var active = false
@@ -32,6 +33,9 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private var hotKeysRegistered = false
     private var warnedEnding = false
     private var agentTimer: Timer?
+    private var watchTimer: Timer?
+    private var watchAutoActive = false
+    private var lastWatchStop: Date?
 
     private func startAgentDetection() {
         agentTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
@@ -83,7 +87,8 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
                 "/applications/claude.app/", "/applications/cursor.app/",
                 "/applications/windsurf.app/", "/.codex/", "/contents/frameworks/",
             ]
-            var matched: String?
+            var matchedKeys: [String] = []
+            var seen = Set<String>()
             for line in out.split(separator: "\n") {
                 let parts = line.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
                 guard let executable = parts.first else { continue }
@@ -96,23 +101,34 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
                 if path.contains(".app/contents/macos/"), editorApps.contains(name) {
                     continue
                 }
+                var key: String?
                 if procs.contains(name) {
-                    matched = name
-                    break
+                    key = name
+                } else if interpreters.contains(name), let entry = markers.first(where: { args.contains($0.marker) }) {
+                    key = entry.key
                 }
-                if interpreters.contains(name), let entry = markers.first(where: { args.contains($0.marker) }) {
-                    matched = entry.key
-                    break
+                if let key, !seen.contains(key) {
+                    seen.insert(key)
+                    matchedKeys.append(key)
                 }
             }
-            let running = matched != nil
-            let label = matched.map { AgentRegistry.label(for: $0) }
+
+            var order: [String] = []
+            var seenLabels = Set<String>()
+            for key in matchedKeys {
+                let label = AgentRegistry.label(for: key)
+                if !seenLabels.contains(label) {
+                    seenLabels.insert(label)
+                    order.append(label)
+                }
+            }
+            let running = !order.isEmpty
 
             DispatchQueue.main.async {
                 guard let self = self else { return }
-                if self.agentRunning != running || self.agentName != label {
+                if self.agentRunning != running || self.agentNames != order {
                     self.agentRunning = running
-                    self.agentName = label
+                    self.agentNames = order
                     self.refreshAll()
                 }
                 guard running, !self.active else { return }
@@ -143,8 +159,12 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        clearPersistedSession()
+        recordActiveDurationIfNeeded()
+        if !UserDefaults.standard.bool(forKey: "updating") {
+            clearPersistedSession()
+        }
         stopBatteryGuard()
+        stopWatchApps()
         releaseAssertions()
     }
 
@@ -189,6 +209,23 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         applyTriggers()
         startAgentDetection()
         refreshAll()
+
+        UserDefaults.standard.set(false, forKey: "updating")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
+            self?.autoUpdateCheck()
+        }
+
+        NotificationCenter.default.addObserver(forName: .matchaPrefsChanged, object: nil, queue: .main) { [weak self] _ in
+            guard let self else { return }
+            self.applyPreferences()
+            if let badge = self.badge {
+                badge.resize(to: FloatingBadge.size(for: UserDefaults.standard.string(forKey: Pref.badgeSize) ?? "medium"))
+                self.clampBadgeToScreen()
+            }
+            self.refreshAll()
+        }
+
+        startWatchApps()
 
         let show = DispatchWorkItem { [weak self] in
             self?.showWindow()
@@ -363,7 +400,8 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             "duration": duration.map { Int($0) } ?? -1,
             "trigger": triggerBusy,
             "agent": agentRunning,
-            "agentName": agentName ?? "",
+            "agentName": agentNames.joined(separator: ", "),
+            "agentCount": agentNames.count,
             "hotkeys": hotKeysRegistered,
         ]
 
@@ -401,6 +439,13 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         )
         updates.target = self
         appMenu.addItem(updates)
+        let prefs = NSMenuItem(
+            title: "Settings\u{2026}",
+            action: #selector(showSettings),
+            keyEquivalent: ","
+        )
+        prefs.target = self
+        appMenu.addItem(prefs)
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Hide Matcha", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         appMenu.addItem(.separator())
@@ -489,7 +534,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private func createStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
-            button.image = symbolImage(["moon.zzz.fill", "moon.stars", "cup.and.saucer.fill", "cup.and.saucer"])
+            button.image = symbolImage(["cup.and.saucer.fill", "cup.and.saucer", "leaf.fill", "leaf"])
             button.contentTintColor = active ? Matcha.green : NSColor.tertiaryLabelColor
             button.imagePosition = .imageLeading
             button.font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
@@ -543,7 +588,16 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
 
     private func buildSettingsMenu() -> NSMenu {
         let menu = NSMenu()
+        let showTips = UserDefaults.standard.bool(forKey: Pref.showTips)
 
+        func tip(_ text: String) {
+            guard showTips else { return }
+            let item = NSMenuItem(title: text, action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            menu.addItem(item)
+        }
+
+        // Primary
         let power = NSMenuItem(
             title: active ? "Stop Matcha" : "Start Matcha",
             action: #selector(togglePower(_:)),
@@ -573,9 +627,14 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         setMenu.addItem(durationItem("8 Hours", seconds: 28800, tag: 0))
         setMenu.addItem(durationItem("Until I Stop", seconds: nil, tag: 1))
         setMenu.addItem(.separator())
-        setMenu.addItem(durationItem("Other…", seconds: nil, tag: 2))
+        setMenu.addItem(durationItem("Other\u{2026}", seconds: nil, tag: 2))
+        let untilItem = NSMenuItem(title: "Until a Time\u{2026}", action: #selector(untilTime(_:)), keyEquivalent: "")
+        untilItem.target = self
+        setMenu.addItem(untilItem)
         setItem.submenu = setMenu
         menu.addItem(setItem)
+
+        tip("Pick a length, or run until you stop. Quick-add extends an active session.")
 
         menu.addItem(.separator())
 
@@ -586,19 +645,26 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             return item
         }
 
+        // Core
         menu.addItem(toggleItem("Keep Display On & Unlocked", Pref.keepDisplayOn, #selector(toggleKeepDisplay(_:))))
         menu.addItem(toggleItem("Auto-Keep Awake for Code", Pref.autoTriggers, #selector(toggleAutoTriggers(_:))))
         if Battery.hasBattery {
             menu.addItem(toggleItem("Low Battery Guard", Pref.batteryGuard, #selector(toggleBatteryGuard(_:))))
         }
-        menu.addItem(toggleItem("Show in Menu Bar", Pref.showMenuBarIcon, #selector(toggleMenuBarIcon(_:))))
-        menu.addItem(toggleItem("Show Time in Menu Bar", Pref.menuBarCountdown, #selector(toggleMenuBarCountdown(_:))))
-        menu.addItem(toggleItem("Show Floating Indicator", Pref.showFloatingIndicator, #selector(toggleFloatingIndicator(_:))))
-        menu.addItem(toggleItem("Translucent Indicator", Pref.translucentIndicator, #selector(toggleTranslucent(_:))))
 
-        let addAgent = NSMenuItem(title: "Add Coding Agent\u{2026}", action: #selector(addCustomAgent(_:)), keyEquivalent: "")
-        addAgent.target = self
-        menu.addItem(addAgent)
+        tip("Display On also blocks the lock screen. Auto-Keep watches for builds and coding agents.")
+
+        menu.addItem(.separator())
+
+        // Advanced
+        let advanced = NSMenuItem(title: "Advanced", action: nil, keyEquivalent: "")
+        let advancedMenu = NSMenu()
+
+        advancedMenu.addItem(toggleItem("Show in Menu Bar", Pref.showMenuBarIcon, #selector(toggleMenuBarIcon(_:))))
+        advancedMenu.addItem(toggleItem("Show Time in Menu Bar", Pref.menuBarCountdown, #selector(toggleMenuBarCountdown(_:))))
+        advancedMenu.addItem(toggleItem("Show Floating Indicator", Pref.showFloatingIndicator, #selector(toggleFloatingIndicator(_:))))
+        advancedMenu.addItem(toggleItem("Translucent Indicator", Pref.translucentIndicator, #selector(toggleTranslucent(_:))))
+        advancedMenu.addItem(toggleItem("Animations", Pref.animations, #selector(toggleAnimations(_:))))
 
         let sizeItem = NSMenuItem(title: "Indicator Size", action: nil, keyEquivalent: "")
         let sizeMenu = NSMenu()
@@ -612,19 +678,17 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             sizeMenu.addItem(item)
         }
         sizeItem.submenu = sizeMenu
-        menu.addItem(sizeItem)
+        advancedMenu.addItem(sizeItem)
 
         if #available(macOS 13.0, *) {
             let login = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin(_:)), keyEquivalent: "")
             login.target = self
             login.state = launchAtLoginEnabled() ? .on : .off
-            menu.addItem(login)
+            advancedMenu.addItem(login)
         }
 
-        menu.addItem(.separator())
-
         let appearanceItem = NSMenuItem(title: "Appearance", action: nil, keyEquivalent: "")
-        let submenu = NSMenu()
+        let appearanceMenu = NSMenu()
         let modes: [(String, String)] = [("Match System", "system"), ("Light", "light"), ("Dark", "dark")]
         let current = UserDefaults.standard.string(forKey: Pref.appearance) ?? "system"
         for (index, mode) in modes.enumerated() {
@@ -632,12 +696,21 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             item.target = self
             item.tag = index
             item.state = mode.1 == current ? .on : .off
-            submenu.addItem(item)
+            appearanceMenu.addItem(item)
         }
-        appearanceItem.submenu = submenu
-        menu.addItem(appearanceItem)
+        appearanceItem.submenu = appearanceMenu
+        advancedMenu.addItem(appearanceItem)
+
+        let addAgent = NSMenuItem(title: "Add Coding Agent\u{2026}", action: #selector(addCustomAgent(_:)), keyEquivalent: "")
+        addAgent.target = self
+        advancedMenu.addItem(addAgent)
+
+        advanced.submenu = advancedMenu
+        menu.addItem(advanced)
 
         menu.addItem(.separator())
+
+        menu.addItem(toggleItem("Show Tips", Pref.showTips, #selector(toggleTips(_:))))
 
         let hint = NSMenuItem(
             title: "Hotkeys: \u{2303}\u{2325}\u{2318}M toggle \u{00B7} \u{2303}\u{2325}\u{2318}1 one hour",
@@ -655,6 +728,17 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             NSMenuItem(title: "Quit Matcha", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         )
         return menu
+    }
+
+    @objc private func toggleAnimations(_ sender: NSMenuItem) {
+        let value = !UserDefaults.standard.bool(forKey: Pref.animations)
+        UserDefaults.standard.set(value, forKey: Pref.animations)
+        refreshAll()
+    }
+
+    @objc private func toggleTips(_ sender: NSMenuItem) {
+        let value = !UserDefaults.standard.bool(forKey: Pref.showTips)
+        UserDefaults.standard.set(value, forKey: Pref.showTips)
     }
 
     @objc private func addCustomAgent(_ sender: Any?) {
@@ -682,50 +766,177 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private struct ReleaseInfo: Decodable {
         let tag_name: String
         let html_url: String
+        let assets: [Asset]
+    }
+
+    private struct Asset: Decodable {
+        let name: String
+        let browser_download_url: String
+    }
+
+    private func fetchLatestRelease(_ completion: @escaping (String?, URL?, URL?, String?) -> Void) {
+        guard let url = URL(string: "https://api.github.com/repos/jakeantelis/Matcha/releases/latest") else {
+            completion(nil, nil, nil, nil)
+            return
+        }
+        var request = URLRequest(url: url)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 10
+        URLSession.shared.dataTask(with: request) { data, _, _ in
+            guard let data, let release = try? JSONDecoder().decode(ReleaseInfo.self, from: data) else {
+                DispatchQueue.main.async { completion(nil, nil, nil, nil) }
+                return
+            }
+            let version = release.tag_name.trimmingCharacters(in: CharacterSet(charactersIn: "vV"))
+            var zipURL: URL?
+            var shaURL: URL?
+            for asset in release.assets {
+                if asset.name == "Matcha.zip" { zipURL = URL(string: asset.browser_download_url) }
+                if asset.name == "Matcha.zip.sha256" { shaURL = URL(string: asset.browser_download_url) }
+            }
+            DispatchQueue.main.async {
+                completion(version, zipURL, shaURL, release.html_url)
+            }
+        }.resume()
     }
 
     @objc private func checkForUpdates(_ sender: Any?) {
         let current = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
-        guard let url = URL(string: "https://api.github.com/repos/jakeantelis/Matcha/releases/latest") else { return }
-        var request = URLRequest(url: url)
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        request.timeoutInterval = 10
+        fetchLatestRelease { [weak self] version, zipURL, shaURL, page in
+            guard let self else { return }
+            NSApp.activate(ignoringOtherApps: true)
+            guard let version, let page else {
+                let alert = NSAlert()
+                alert.messageText = "Couldn't check for updates"
+                alert.informativeText = "Check your connection and try again."
+                alert.addButton(withTitle: "Open Releases")
+                alert.addButton(withTitle: "OK")
+                if alert.runModal() == .alertFirstButtonReturn {
+                    NSWorkspace.shared.open(URL(string: "https://github.com/jakeantelis/Matcha/releases")!)
+                }
+                return
+            }
+            if Self.isVersion(version, newerThan: current) {
+                self.presentUpdate(version: version, zipURL: zipURL, shaURL: shaURL, page: URL(string: page))
+            } else {
+                let alert = NSAlert()
+                alert.messageText = "You're up to date"
+                alert.informativeText = "Matcha \(current) is the latest version."
+                alert.addButton(withTitle: "OK")
+                alert.runModal()
+            }
+        }
+    }
 
-        URLSession.shared.dataTask(with: request) { data, _, error in
-            DispatchQueue.main.async {
-                NSApp.activate(ignoringOtherApps: true)
+    private func autoUpdateCheck() {
+        let key = "lastUpdateCheck"
+        let defaults = UserDefaults.standard
+        guard Date().timeIntervalSince1970 - defaults.double(forKey: key) > 86400 else { return }
+        defaults.set(Date().timeIntervalSince1970, forKey: key)
+        let current = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+        fetchLatestRelease { [weak self] version, zipURL, shaURL, page in
+            guard let self, let version, let page, Self.isVersion(version, newerThan: current) else { return }
+            self.presentUpdate(version: version, zipURL: zipURL, shaURL: shaURL, page: URL(string: page))
+        }
+    }
 
-                if let data, let release = try? JSONDecoder().decode(ReleaseInfo.self, from: data) {
-                    let latest = release.tag_name.trimmingCharacters(in: CharacterSet(charactersIn: "vV"))
-                    if Self.isVersion(latest, newerThan: current) {
-                        let alert = NSAlert()
-                        alert.messageText = "Matcha \(latest) is available"
-                        alert.informativeText = "You have \(current). Rerun the install command to update, or download the new version."
-                        alert.addButton(withTitle: "Download")
-                        alert.addButton(withTitle: "Later")
-                        if alert.runModal() == .alertFirstButtonReturn,
-                           let page = URL(string: release.html_url) {
-                            NSWorkspace.shared.open(page)
-                        }
-                    } else {
-                        let alert = NSAlert()
-                        alert.messageText = "You\u{2019}re up to date"
-                        alert.informativeText = "Matcha \(current) is the latest version."
-                        alert.addButton(withTitle: "OK")
-                        alert.runModal()
-                    }
-                } else {
+    private func presentUpdate(version: String, zipURL: URL?, shaURL: URL?, page: URL?) {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Matcha \(version) is available"
+        let current = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+        alert.informativeText = "You have \(current). Your current mode and settings are kept."
+        alert.addButton(withTitle: "Install & Restart")
+        if page != nil {
+            alert.addButton(withTitle: "Download")
+            alert.addButton(withTitle: "Later")
+        } else {
+            alert.addButton(withTitle: "Later")
+        }
+        let result = alert.runModal()
+        if result == .alertFirstButtonReturn {
+            installUpdate(zipURL: zipURL, shaURL: shaURL)
+        } else if result == .alertSecondButtonReturn, let page {
+            NSWorkspace.shared.open(page)
+        }
+    }
+
+    private func installUpdate(zipURL: URL?, shaURL: URL?) {
+        guard let zipURL, let shaURL else {
+            let alert = NSAlert()
+            alert.messageText = "Update unavailable"
+            alert.informativeText = "This release is missing its download. Use the installer instead."
+            alert.runModal()
+            return
+        }
+        persistSession()
+        UserDefaults.standard.set(true, forKey: "updating")
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let tmp = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("matcha-update-\(UUID().uuidString)")
+                try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+                let zip = tmp.appendingPathComponent("Matcha.zip")
+                guard let zipData = try? Data(contentsOf: zipURL),
+                      let shaText = try? String(contentsOf: shaURL, encoding: .utf8) else {
+                    throw URLError(.badServerResponse)
+                }
+                try zipData.write(to: zip)
+                let expected = shaText.split(separator: " ").first.map(String.init)?.lowercased() ?? ""
+                let computed = SHA256.hash(data: zipData).map { String(format: "%02x", $0) }.joined()
+                guard !expected.isEmpty, expected == computed else {
+                    throw URLError(.badServerResponse)
+                }
+
+                let ditto = Process()
+                ditto.launchPath = "/usr/bin/ditto"
+                ditto.arguments = ["-x", "-k", zip.path, tmp.path]
+                ditto.launch()
+                ditto.waitUntilExit()
+
+                let newApp = tmp.appendingPathComponent("Matcha.app")
+                guard FileManager.default.fileExists(atPath: newApp.path) else {
+                    throw URLError(.cannotDecodeContentData)
+                }
+
+                let appPath = Bundle.main.bundlePath
+                let script = tmp.appendingPathComponent("install.sh")
+                let scriptText = """
+                #!/bin/sh
+                while pgrep -x Matcha >/dev/null 2>&1; do sleep 0.3; done
+                rm -rf "\(appPath)"
+                ditto "\(newApp.path)" "\(appPath)"
+                xattr -dr com.apple.quarantine "\(appPath)" 2>/dev/null || true
+                rm -rf "\(tmp.path)"
+                sleep 0.5
+                open "\(appPath)"
+                """
+                try scriptText.write(to: script, atomically: true, encoding: .utf8)
+
+                let chmod = Process()
+                chmod.launchPath = "/bin/chmod"
+                chmod.arguments = ["+x", script.path]
+                chmod.launch()
+                chmod.waitUntilExit()
+
+                DispatchQueue.main.async {
+                    let launcher = Process()
+                    launcher.launchPath = "/bin/sh"
+                    launcher.arguments = ["-c", "nohup \"\(script.path)\" >/dev/null 2>&1 &"]
+                    launcher.launch()
+                    NSApp.terminate(nil)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    UserDefaults.standard.set(false, forKey: "updating")
                     let alert = NSAlert()
-                    alert.messageText = "Couldn\u{2019}t check for updates"
-                    alert.informativeText = error?.localizedDescription ?? "Check your connection and try again."
-                    alert.addButton(withTitle: "Open Releases")
-                    alert.addButton(withTitle: "OK")
-                    if alert.runModal() == .alertFirstButtonReturn {
-                        NSWorkspace.shared.open(URL(string: "https://github.com/jakeantelis/Matcha/releases")!)
-                    }
+                    alert.messageText = "Update failed"
+                    alert.informativeText = "Your session is untouched. You can update by running the install command instead."
+                    alert.runModal()
                 }
             }
-        }.resume()
+        }
     }
 
     private static func isVersion(_ candidate: String, newerThan current: String) -> Bool {
@@ -880,6 +1091,109 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
 
     private var sessionStartedAt: Date?
 
+    @objc private func showSettings() {
+        PreferencesWindowController.shared.show()
+    }
+
+    @objc private func untilTime(_ sender: NSMenuItem) {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Keep awake until"
+        alert.informativeText = "Enter a time, like 6pm or 18:30."
+        alert.addButton(withTitle: "Start")
+        alert.addButton(withTitle: "Cancel")
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 24))
+        field.placeholderString = "6pm"
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+        guard alert.runModal() == .alertFirstButtonReturn,
+              let date = Fmt.parseClockTime(field.stringValue) else { return }
+        start(until: date)
+    }
+
+    private func start(until end: Date) {
+        let seconds = end.timeIntervalSinceNow
+        guard seconds > 0 else { NSSound.beep(); return }
+        if !active {
+            createAssertions()
+            guard assertionID != 0 else { NSSound.beep(); return }
+            active = true
+            sessionStartedAt = Date()
+        }
+        duration = seconds
+        endDate = end
+        warnedEnding = false
+        startTicker()
+        startBatteryGuard()
+        persistSession()
+        refreshAll()
+    }
+
+    // MARK: - Usage stats
+
+    private func addAwake(_ seconds: TimeInterval) {
+        let defaults = UserDefaults.standard
+        defaults.set(defaults.double(forKey: Pref.awakeTotal) + seconds, forKey: Pref.awakeTotal)
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let key = formatter.string(from: Date())
+        if defaults.string(forKey: Pref.awakeTodayDate) != key {
+            defaults.set(key, forKey: Pref.awakeTodayDate)
+            defaults.set(0, forKey: Pref.awakeToday)
+        }
+        defaults.set(defaults.double(forKey: Pref.awakeToday) + seconds, forKey: Pref.awakeToday)
+    }
+
+    private func recordActiveDurationIfNeeded() {
+        guard active, let started = sessionStartedAt else { return }
+        addAwake(Date().timeIntervalSince(started))
+        sessionStartedAt = nil
+    }
+
+    // MARK: - Watched apps
+
+    private func startWatchApps() {
+        guard watchTimer == nil else { return }
+        let timer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
+            self?.checkWatchApps()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        watchTimer = timer
+        checkWatchApps()
+    }
+
+    private func stopWatchApps() {
+        watchTimer?.invalidate()
+        watchTimer = nil
+    }
+
+    private func checkWatchApps() {
+        let names = (UserDefaults.standard.stringArray(forKey: Pref.watchApps) ?? [])
+            .map { $0.lowercased().trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        guard !names.isEmpty else {
+            if watchAutoActive { watchAutoActive = false; stop() }
+            return
+        }
+
+        let running = names.contains { name in
+            NSWorkspace.shared.runningApplications.contains { app in
+                (app.localizedName?.lowercased() ?? "") == name
+                    || (app.bundleIdentifier?.lowercased().contains(name) ?? false)
+            }
+        }
+
+        if running, !active {
+            if let last = lastWatchStop, Date().timeIntervalSince(last) < 300 { return }
+            watchAutoActive = true
+            start(duration: nil)
+        } else if !running, watchAutoActive {
+            watchAutoActive = false
+            stop()
+        }
+    }
+
     private func start(duration seconds: TimeInterval?) {
         if !active {
             createAssertions()
@@ -910,8 +1224,10 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         duration = nil
         warnedEnding = false
         stopBatteryGuard()
+        lastWatchStop = Date()
         clearPersistedSession()
         if let started = sessionStartedAt {
+            addAwake(Date().timeIntervalSince(started))
             let mins = Int(Date().timeIntervalSince(started) / 60)
             if mins >= 5 {
                 let content = UNMutableNotificationContent()
@@ -1132,7 +1448,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             duration: duration,
             triggerBusy: triggerBusy,
             agentRunning: agentRunning,
-            agentName: agentName
+            agentNames: agentNames
         )
         popoverPanel?.apply(state: state)
         windowPanel?.apply(state: state)
@@ -1178,7 +1494,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         button.image = symbolImage(
             active
                 ? ["cup.and.saucer.fill", "cup.and.saucer", "mug.fill", "mug"]
-                : ["moon.zzz.fill", "moon.stars", "cup.and.saucer"]
+                : ["leaf.fill", "leaf", "cup.and.saucer"]
         )
         button.contentTintColor = active ? Matcha.green : NSColor.tertiaryLabelColor
         let showTime = UserDefaults.standard.bool(forKey: Pref.menuBarCountdown)

@@ -39,6 +39,13 @@ final class FloatingBadge: NSPanel {
         badgeView.frame = NSRect(x: 0, y: 0, width: side, height: side)
         badgeView.autoresizingMask = [.width, .height]
         badgeView.toolTip = "Click for timer and settings \u{00B7} Right-click for quick actions \u{00B7} Drag to move"
+        badgeView.onClick = { [weak self] in self?.onClick?() }
+        badgeView.onRightClick = { [weak self] in self?.onRightClick?() }
+        badgeView.onMoved = { [weak self] origin in self?.setFrameOrigin(origin) }
+        badgeView.onDragEnded = { [weak self] in
+            guard let self else { return }
+            self.onMoved?(self.frame.origin)
+        }
         badgeView.onQuickAdd = { [weak self] seconds in self?.onQuickAdd?(seconds) }
         badgeView.onStop = { [weak self] in self?.onStop?() }
         contentView = badgeView
@@ -82,6 +89,8 @@ final class BadgeView: NSView {
     private var movedDuringDrag = false
     private var hovering = false
     private var tracking: NSTrackingArea?
+    private var animTimer: Timer?
+    private var phase: CGFloat = 0
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
@@ -98,6 +107,26 @@ final class BadgeView: NSView {
 
     override func resetCursorRects() {
         addCursorRect(bounds, cursor: .pointingHand)
+    }
+
+    private func startAnim() {
+        guard animTimer == nil, animationsEnabled() else { return }
+        let timer = Timer(timeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            guard animationsEnabled() else { self.stopAnim(); return }
+            self.phase += 0.02
+            if self.phase > 1 { self.phase -= 1 }
+            self.needsDisplay = true
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        animTimer = timer
+    }
+
+    private func stopAnim() {
+        animTimer?.invalidate()
+        animTimer = nil
+        phase = 0
+        needsDisplay = true
     }
 
     override func mouseEntered(with event: NSEvent) {
@@ -125,6 +154,22 @@ final class BadgeView: NSView {
         let path = NSBezierPath(ovalIn: circle)
         NSColor.controlBackgroundColor.withAlphaComponent(fillAlpha).setFill()
         path.fill()
+
+        // Active breathing glow, matching the main window's warm halo
+        if active {
+            let wave = 0.5 + 0.5 * sin(phase * 2 * .pi)
+            let glowRect = NSInsetRect(circle, -3 * scale, -3 * scale)
+            if let ctx = NSGraphicsContext.current {
+                ctx.saveGraphicsState()
+                NSBezierPath(ovalIn: glowRect).addClip()
+                let g = NSGradient(colors: [
+                    Matcha.green.withAlphaComponent(0.12 + 0.10 * wave),
+                    Matcha.green.withAlphaComponent(0),
+                ])
+                g?.draw(in: glowRect, angle: -90)
+                ctx.restoreGraphicsState()
+            }
+        }
 
         if hovering {
             let glowRect = NSInsetRect(circle, -2 * scale, -2 * scale)

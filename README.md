@@ -119,6 +119,30 @@ open -g "matcha://toggle"
 `-g` keeps Matcha in the background. Live status is written to
 `~/Library/Application Support/Matcha/status.plist` for tooling.
 
+### Shortcuts & AppleScript
+
+Matcha is reachable from **Shortcuts** with a single *Open URL* action:
+
+```
+matcha://on?hours=2
+matcha://on?minutes=45
+matcha://off
+matcha://toggle
+```
+
+Or use *Run Shell Script* for anything the CLI does:
+
+```sh
+/Applications/Matcha.app/Contents/Resources/matchactl on 2     # 2 hours
+/Applications/Matcha.app/Contents/Resources/matcha run -- ./deploy.sh
+```
+
+AppleScript:
+
+```applescript
+do shell script "/Applications/Matcha.app/Contents/Resources/matchactl on 2"
+```
+
 ## Agents
 
 The installer configures every agent it can find, using a managed block that is

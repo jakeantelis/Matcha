@@ -6,59 +6,84 @@ func renderIcon(side: CGFloat) -> NSImage {
 
     let canvas = NSRect(x: 0, y: 0, width: side, height: side)
 
+    // Squircle background (Big Sur style)
+    let bg = NSBezierPath(
+        roundedRect: canvas.insetBy(dx: side * 0.01, dy: side * 0.01),
+        xRadius: side * 0.18,
+        yRadius: side * 0.18
+    )
+    NSGraphicsContext.current?.saveGraphicsState()
+    bg.addClip()
+
     let gradient = NSGradient(colors: [
-        NSColor(srgbRed: 0.55, green: 0.85, blue: 0.62, alpha: 1),
-        NSColor(srgbRed: 0.35, green: 0.70, blue: 0.44, alpha: 1),
-        NSColor(srgbRed: 0.20, green: 0.50, blue: 0.32, alpha: 1),
+        NSColor(srgbRed: 0.52, green: 0.84, blue: 0.62, alpha: 1),
+        NSColor(srgbRed: 0.30, green: 0.68, blue: 0.44, alpha: 1),
+        NSColor(srgbRed: 0.14, green: 0.47, blue: 0.30, alpha: 1),
     ])
-    gradient?.draw(in: canvas, relativeCenterPosition: NSPoint(x: 0, y: 0.22))
+    gradient?.draw(in: canvas, relativeCenterPosition: NSPoint(x: 0, y: 0.32))
+
+    let depth = NSGradient(colors: [
+        NSColor(srgbRed: 0.08, green: 0.36, blue: 0.22, alpha: 0.40),
+        NSColor(srgbRed: 0.08, green: 0.36, blue: 0.22, alpha: 0.0),
+    ])
+    depth?.draw(in: canvas, relativeCenterPosition: NSPoint(x: -0.55, y: -0.60))
+
+    NSGraphicsContext.current?.restoreGraphicsState()
 
     let cx = side / 2
 
-    // -- saucer --
-    let saucer = NSBezierPath(ovalIn: NSRect(x: cx - side * 0.30, y: side * 0.10, width: side * 0.60, height: side * 0.14))
-    NSColor(srgbRed: 0.12, green: 0.38, blue: 0.24, alpha: 0.30).setFill()
+    // Saucer
+    let saucer = NSBezierPath(ovalIn: NSRect(x: cx - side * 0.29, y: side * 0.085, width: side * 0.58, height: side * 0.125))
+    NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.18).setFill()
     saucer.fill()
 
-    // -- cup body --
-    let cupTop = side * 0.56
-    let cupBottom = side * 0.18
-    let cupHalfTop = side * 0.22
-    let cupHalfBottom = side * 0.16
+    // Cup
+    let cupTop = side * 0.60
+    let cupBottom = side * 0.23
+    let cupHalfTop = side * 0.205
+    let cupHalfBottom = side * 0.14
 
     let cup = NSBezierPath()
     cup.move(to: NSPoint(x: cx - cupHalfTop, y: cupTop))
-    cup.line(to: NSPoint(x: cx - cupHalfBottom, y: cupBottom))
+    cup.line(to: NSPoint(x: cx - cupHalfBottom, y: cupBottom + side * 0.05))
     cup.curve(
-        to: NSPoint(x: cx + cupHalfBottom, y: cupBottom),
-        controlPoint1: NSPoint(x: cx - cupHalfBottom, y: cupBottom - side * 0.06),
-        controlPoint2: NSPoint(x: cx + cupHalfBottom, y: cupBottom - side * 0.06)
+        to: NSPoint(x: cx + cupHalfBottom, y: cupBottom + side * 0.05),
+        controlPoint1: NSPoint(x: cx - cupHalfBottom, y: cupBottom - side * 0.05),
+        controlPoint2: NSPoint(x: cx + cupHalfBottom, y: cupBottom - side * 0.05)
     )
     cup.line(to: NSPoint(x: cx + cupHalfTop, y: cupTop))
     cup.close()
 
-    let cupColor = NSColor(srgbRed: 1.00, green: 0.97, blue: 0.91, alpha: 1)
-    cupColor.setFill()
+    NSColor(srgbRed: 1.00, green: 0.985, blue: 0.93, alpha: 1).setFill()
     cup.fill()
 
-    // -- tea surface (ellipse across the brim) --
-    let tea = NSBezierPath(ovalIn: NSRect(x: cx - cupHalfTop, y: cupTop - side * 0.055, width: side * 0.44, height: side * 0.11))
-    NSColor(srgbRed: 0.45, green: 0.74, blue: 0.40, alpha: 0.95).setFill()
+    // Left highlight for a glass feel
+    let shine = NSBezierPath()
+    shine.move(to: NSPoint(x: cx - cupHalfTop + side * 0.055, y: cupTop - side * 0.045))
+    shine.line(to: NSPoint(x: cx - cupHalfBottom + side * 0.02, y: cupBottom + side * 0.055))
+    shine.lineWidth = side * 0.035
+    shine.lineCapStyle = .round
+    NSColor.white.withAlphaComponent(0.7).setStroke()
+    shine.stroke()
+
+    // Tea surface across the brim
+    let tea = NSBezierPath(ovalIn: NSRect(x: cx - cupHalfTop, y: cupTop - side * 0.055, width: side * 0.41, height: side * 0.105))
+    NSColor(srgbRed: 0.28, green: 0.64, blue: 0.39, alpha: 1).setFill()
     tea.fill()
 
-    // -- steam --
-    let steamColor = NSColor.white.withAlphaComponent(0.80)
+    // Steam
+    let steamColor = NSColor.white.withAlphaComponent(0.85)
     steamColor.setStroke()
-    for offset in [-side * 0.05, side * 0.05] {
+    for offset in [-side * 0.045, side * 0.045] {
         let steam = NSBezierPath()
         let baseY = cupTop + side * 0.05
         steam.move(to: NSPoint(x: cx + offset, y: baseY))
         steam.curve(
             to: NSPoint(x: cx + offset, y: baseY + side * 0.14),
-            controlPoint1: NSPoint(x: cx + offset - side * 0.04, y: baseY + side * 0.04),
-            controlPoint2: NSPoint(x: cx + offset + side * 0.04, y: baseY + side * 0.10)
+            controlPoint1: NSPoint(x: cx + offset - side * 0.035, y: baseY + side * 0.045),
+            controlPoint2: NSPoint(x: cx + offset + side * 0.035, y: baseY + side * 0.10)
         )
-        steam.lineWidth = side * 0.03
+        steam.lineWidth = side * 0.026
         steam.lineCapStyle = .round
         steam.stroke()
     }
