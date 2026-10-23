@@ -8,9 +8,8 @@
 [![Built with Swift](https://img.shields.io/badge/Swift-AppKit-F05138)]()
 
 <p align="center">
-  <img src="docs/shot-idle-card2.png" width="240" alt="Matcha idle — sleep allowed">
-  <img src="docs/shot-active-card2.png" width="240" alt="Matcha active — steeping">
-  <img src="docs/shot-agent-card.png" width="240" alt="Matcha detecting running coding agents">
+  <img src="docs/shot-idle-card2.png" width="260" alt="Matcha idle — sleep allowed">
+  <img src="docs/shot-active-card2.png" width="260" alt="Matcha active — steeping">
 </p>
 
 <p align="center"><b>Works with</b> · Claude Code · Codex · Cursor · opencode · Aider · Gemini CLI · Windsurf · <i>and 43+ more</i></p>
