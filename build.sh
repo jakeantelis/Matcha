@@ -13,6 +13,7 @@ echo "Compiling..."
 swiftc -O Sources/*.swift \
     -o "$APP/Contents/MacOS/Matcha" \
     -framework AppKit \
+    -framework Carbon \
     -framework IOKit \
     -framework ServiceManagement \
     -framework UserNotifications
