@@ -19,7 +19,7 @@ final class PreferencesWindowController: NSObject {
     }
 
     private func makeWindow() -> NSWindow {
-        let content = NSView(frame: NSRect(x: 0, y: 0, width: 380, height: 560))
+        let content = NSView(frame: NSRect(x: 0, y: 0, width: 340, height: 560))
 
         let stack = NSStackView()
         stack.orientation = .vertical
@@ -93,7 +93,7 @@ final class PreferencesWindowController: NSObject {
         watchField.target = self
         watchField.action = #selector(watchAppsChanged(_:))
         watchField.translatesAutoresizingMaskIntoConstraints = false
-        watchField.widthAnchor.constraint(equalToConstant: 340).isActive = true
+        watchField.widthAnchor.constraint(equalToConstant: 280).isActive = true
         stack.addArrangedSubview(watchField)
 
         header("Usage")
@@ -110,7 +110,7 @@ final class PreferencesWindowController: NSObject {
         ])
 
         content.addSubview(stack)
-        content.frame = NSRect(x: 0, y: 0, width: 380, height: stack.fittingSize.height + 40)
+        content.frame = NSRect(x: 0, y: 0, width: 340, height: stack.fittingSize.height + 40)
         stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 20).isActive = true
 
         let window = NSWindow(

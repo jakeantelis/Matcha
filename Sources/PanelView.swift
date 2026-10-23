@@ -7,6 +7,7 @@ final class PanelView: NSView {
     var onPreset: ((TimeInterval?) -> Void)?
     var onCustomMinutes: ((Int) -> Void)?
     var onMenu: ((NSView) -> Void)?
+    var onResize: (() -> Void)?
 
     private let ring = RingButton()
     private let cupIcon = NSImageView()
@@ -16,7 +17,6 @@ final class PanelView: NSView {
     private let gear = NSButton()
     private let durationInput = DurationInputView()
     private let activityLabel = NSTextField(labelWithString: "")
-    private let cursorLabel = NSTextField(labelWithString: "_")
     private let activityRow = NSStackView()
     private let separator = NSView()
     private var presetChips: [PillButton] = []
@@ -28,6 +28,10 @@ final class PanelView: NSView {
     private var marqueeCap = 0
     private var marqueeColor = NSColor.secondaryLabelColor
     private var marqueeGlow = false
+    private var footerText = ""
+    private var footerActive = false
+    private var cursorOn = false
+    private let stack = NSStackView()
 
     private let panelWidth: CGFloat = 320
     private let pad: CGFloat = 20
@@ -83,44 +87,47 @@ final class PanelView: NSView {
         }
         let activityColor = activeBusy ? brightGreen : NSColor.secondaryLabelColor
 
-        let cap = 44
+        footerText = activityText
+        footerActive = activeBusy
+
+        let cap = 34
         if activityText.count > cap, animationsEnabled(), state.agentNames.count > 2 {
             marqueeBase = activityText
             marqueeCap = cap
             marqueeColor = activityColor
             marqueeGlow = activeBusy
             marqueeOffset = marqueeBase.count - 1
+            stopActivityPulse()
             renderMarqueeTick()
             startMarquee()
         } else {
             stopMarquee()
-            activityLabel.attributedStringValue = activityAttributed(activityText, color: activityColor, glow: activeBusy, centered: true)
+            if activeBusy { startActivityPulse() } else { stopActivityPulse() }
+            renderFooter()
         }
 
         activityRow.layer?.backgroundColor = activeBusy
             ? NSColor(calibratedRed: 0.05, green: 0.09, blue: 0.07, alpha: 0.92).cgColor
             : NSColor.quaternaryLabelColor.withAlphaComponent(0.5).cgColor
-        cursorLabel.textColor = brightGreen
-
-        if activeBusy {
-            startActivityPulse()
-        } else {
-            stopActivityPulse()
-        }
-
-        let showFooter = state.active || busy
-        activityRow.isHidden = !showFooter
-        separator.isHidden = !showFooter
 
         statusLabel.stringValue = state.active ? "Steeping · display unlocked" : "Sleep allowed"
         if state.active {
-            detailLabel.isHidden = false
             detailLabel.stringValue = state.endDate != nil ? Fmt.remainingText(state) : "Until you stop"
         } else {
-            detailLabel.isHidden = true
-            detailLabel.stringValue = ""
+            detailLabel.stringValue = " "
         }
+        detailLabel.isHidden = false
         cupIcon.image = matchaMark(size: 18, active: state.active)
+        syncFrame()
+    }
+
+    private func syncFrame() {
+        layoutSubtreeIfNeeded()
+        let height = stack.fittingSize.height + pad * 2
+        if abs(height - frame.height) > 0.5 {
+            frame = NSRect(x: 0, y: 0, width: panelWidth, height: height)
+            onResize?()
+        }
     }
 
     @objc private func gearClicked() { onMenu?(gear) }
@@ -138,7 +145,7 @@ final class PanelView: NSView {
         if glow {
             let shadow = NSShadow()
             shadow.shadowColor = brightGreen.withAlphaComponent(0.9)
-            shadow.shadowBlurRadius = 5
+            shadow.shadowBlurRadius = 2.5
             shadow.shadowOffset = .zero
             attrs[.shadow] = shadow
         }
@@ -170,13 +177,26 @@ final class PanelView: NSView {
         activityLabel.attributedStringValue = activityAttributed(window, color: marqueeColor, glow: marqueeGlow, centered: false)
     }
 
+    private func renderFooter() {
+        var text = footerText
+        if footerActive {
+            text += cursorOn ? "\u{258B}" : " "
+        }
+        activityLabel.attributedStringValue = activityAttributed(
+            text,
+            color: footerActive ? brightGreen : NSColor.secondaryLabelColor,
+            glow: footerActive,
+            centered: true
+        )
+    }
+
     private func startActivityPulse() {
         guard activityPulseTimer == nil, animationsEnabled() else { return }
-        cursorLabel.alphaValue = 1
         let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
             guard let self else { return }
             guard animationsEnabled() else { self.stopActivityPulse(); return }
-            self.cursorLabel.alphaValue = self.cursorLabel.alphaValue > 0.5 ? 0 : 1
+            self.cursorOn.toggle()
+            self.renderFooter()
         }
         RunLoop.main.add(timer, forMode: .common)
         activityPulseTimer = timer
@@ -185,8 +205,8 @@ final class PanelView: NSView {
     private func stopActivityPulse() {
         activityPulseTimer?.invalidate()
         activityPulseTimer = nil
-        cursorLabel.alphaValue = 0
-        activityLabel.alphaValue = 1
+        cursorOn = false
+        renderFooter()
     }
 
     deinit {
@@ -196,6 +216,25 @@ final class PanelView: NSView {
 
     func setTintEnabled(_ enabled: Bool) {
         tint.isHidden = !enabled
+    }
+
+    func showOnboardingHintIfNeeded() {
+        guard !UserDefaults.standard.bool(forKey: Pref.firstRunHintShown) else { return }
+        UserDefaults.standard.set(true, forKey: Pref.firstRunHintShown)
+        detailLabel.isHidden = false
+        detailLabel.alphaValue = 1
+        detailLabel.stringValue = "Tap the ring to start"
+        detailLabel.textColor = .tertiaryLabelColor
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
+            guard let self else { return }
+            NSAnimationContext.runAnimationGroup({ _ in
+                self.detailLabel.animator().alphaValue = 0
+            }, completionHandler: {
+                self.detailLabel.stringValue = " "
+                self.detailLabel.alphaValue = 1
+                self.detailLabel.textColor = .secondaryLabelColor
+            })
+        }
     }
 
     override func cancelOperation(_ sender: Any?) {
@@ -293,17 +332,13 @@ final class PanelView: NSView {
         activityLabel.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
         activityLabel.textColor = .tertiaryLabelColor
         activityLabel.lineBreakMode = .byTruncatingTail
-
-        cursorLabel.font = NSFont(name: "Menlo-Regular", size: 11) ?? NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
-        cursorLabel.textColor = brightGreen
-        cursorLabel.alphaValue = 0
+        activityLabel.usesSingleLineMode = true
 
         activityRow.orientation = .horizontal
-        activityRow.alignment = .firstBaseline
+        activityRow.alignment = .centerY
         activityRow.spacing = 5
-        activityRow.edgeInsets = NSEdgeInsets(top: 4, left: 9, bottom: 4, right: 10)
+        activityRow.edgeInsets = NSEdgeInsets(top: 8, left: 14, bottom: 8, right: 14)
         activityRow.addArrangedSubview(activityLabel)
-        activityRow.addArrangedSubview(cursorLabel)
         activityRow.wantsLayer = true
         activityRow.layer?.cornerRadius = 10
         activityRow.layer?.backgroundColor = NSColor.quaternaryLabelColor.withAlphaComponent(0.5).cgColor
@@ -321,7 +356,6 @@ final class PanelView: NSView {
         durationInput.widthAnchor.constraint(equalToConstant: inner).isActive = true
         durationInput.isHidden = true
 
-        let stack = NSStackView()
         stack.orientation = .vertical
         stack.alignment = .centerX
         stack.spacing = 0

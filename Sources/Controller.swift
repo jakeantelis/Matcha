@@ -210,6 +210,11 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         startAgentDetection()
         refreshAll()
 
+        if !active {
+            popoverPanel?.showOnboardingHintIfNeeded()
+            windowPanel?.showOnboardingHintIfNeeded()
+        }
+
         UserDefaults.standard.set(false, forKey: "updating")
         DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
             self?.autoUpdateCheck()
@@ -420,6 +425,16 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             self?.start(duration: TimeInterval(minutes))
         }
         panel.onMenu = { [weak self] view in self?.presentMenu(from: view) }
+        panel.onResize = { [weak self] in
+            guard let self else { return }
+            if panel === self.popoverPanel, let vc = self.popover.contentViewController {
+                vc.preferredContentSize = panel.frame.size
+            }
+            if panel === self.windowPanel, let w = self.window {
+                let size = panel.frame.size
+                w.setContentSize(NSSize(width: w.contentLayoutRect.width, height: size.height + 34 + 16))
+            }
+        }
     }
 
     private func buildMainMenu() {
@@ -657,15 +672,12 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
 
         menu.addItem(.separator())
 
-        // Advanced
-        let advanced = NSMenuItem(title: "Advanced", action: nil, keyEquivalent: "")
-        let advancedMenu = NSMenu()
-
-        advancedMenu.addItem(toggleItem("Show in Menu Bar", Pref.showMenuBarIcon, #selector(toggleMenuBarIcon(_:))))
-        advancedMenu.addItem(toggleItem("Show Time in Menu Bar", Pref.menuBarCountdown, #selector(toggleMenuBarCountdown(_:))))
-        advancedMenu.addItem(toggleItem("Show Floating Indicator", Pref.showFloatingIndicator, #selector(toggleFloatingIndicator(_:))))
-        advancedMenu.addItem(toggleItem("Translucent Indicator", Pref.translucentIndicator, #selector(toggleTranslucent(_:))))
-        advancedMenu.addItem(toggleItem("Animations", Pref.animations, #selector(toggleAnimations(_:))))
+        // Menu Bar & Floater
+        menu.addItem(toggleItem("Show in Menu Bar", Pref.showMenuBarIcon, #selector(toggleMenuBarIcon(_:))))
+        menu.addItem(toggleItem("Show Time in Menu Bar", Pref.menuBarCountdown, #selector(toggleMenuBarCountdown(_:))))
+        menu.addItem(toggleItem("Show Floating Indicator", Pref.showFloatingIndicator, #selector(toggleFloatingIndicator(_:))))
+        menu.addItem(toggleItem("Translucent Indicator", Pref.translucentIndicator, #selector(toggleTranslucent(_:))))
+        menu.addItem(toggleItem("Animations", Pref.animations, #selector(toggleAnimations(_:))))
 
         let sizeItem = NSMenuItem(title: "Indicator Size", action: nil, keyEquivalent: "")
         let sizeMenu = NSMenu()
@@ -679,13 +691,13 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             sizeMenu.addItem(item)
         }
         sizeItem.submenu = sizeMenu
-        advancedMenu.addItem(sizeItem)
+        menu.addItem(sizeItem)
 
         if #available(macOS 13.0, *) {
             let login = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin(_:)), keyEquivalent: "")
             login.target = self
             login.state = launchAtLoginEnabled() ? .on : .off
-            advancedMenu.addItem(login)
+            menu.addItem(login)
         }
 
         let appearanceItem = NSMenuItem(title: "Appearance", action: nil, keyEquivalent: "")
@@ -700,26 +712,22 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             appearanceMenu.addItem(item)
         }
         appearanceItem.submenu = appearanceMenu
-        advancedMenu.addItem(appearanceItem)
+        menu.addItem(appearanceItem)
 
         let addAgent = NSMenuItem(title: "Add Coding Agent\u{2026}", action: #selector(addCustomAgent(_:)), keyEquivalent: "")
         addAgent.target = self
-        advancedMenu.addItem(addAgent)
-
-        advanced.submenu = advancedMenu
-        menu.addItem(advanced)
+        menu.addItem(addAgent)
 
         menu.addItem(.separator())
 
         menu.addItem(toggleItem("Show Tips", Pref.showTips, #selector(toggleTips(_:))))
 
-        let hint = NSMenuItem(
-            title: "Hotkeys: \u{2303}\u{2325}\u{2318}M toggle \u{00B7} \u{2303}\u{2325}\u{2318}1 one hour",
-            action: nil,
-            keyEquivalent: ""
-        )
-        hint.isEnabled = false
-        menu.addItem(hint)
+        let hint1 = NSMenuItem(title: "Hotkeys: \u{2303}\u{2325}\u{2318}M toggle", action: nil, keyEquivalent: "")
+        hint1.isEnabled = false
+        menu.addItem(hint1)
+        let hint2 = NSMenuItem(title: "\u{2303}\u{2325}\u{2318}1 one hour", action: nil, keyEquivalent: "")
+        hint2.isEnabled = false
+        menu.addItem(hint2)
         menu.addItem(.separator())
 
         let openItem = NSMenuItem(title: "Open Window", action: #selector(showWindow), keyEquivalent: "")
