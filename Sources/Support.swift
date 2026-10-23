@@ -78,6 +78,7 @@ enum Pref {
     static let customAgents = "customAgents"
     static let showTips = "showTips"
     static let animations = "animations"
+    static let firstRunHintShown = "firstRunHintShown"
     static let watchApps = "watchApps"
     static let awakeTotal = "awakeTotal"
     static let awakeToday = "awakeToday"
@@ -94,8 +95,9 @@ enum Pref {
             autoTriggers: true,
             badgeSize: "medium",
             batteryGuard: true,
-            showTips: true,
+            showTips: false,
             animations: true,
+            firstRunHintShown: false,
         ])
     }
 }

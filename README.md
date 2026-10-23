@@ -1,240 +1,118 @@
 # Matcha
 
-**Keep your Mac awake for builds, exports, and AI coding agents.**
+**Keep your Mac awake for builds, exports, and AI coding agents — with a cup of calm.**
 
-[![Release](https://img.shields.io/github/v/release/jakeantelis/Matcha)](https://github.com/jakeantelis/Matcha/releases) [![License](https://img.shields.io/github/license/jakeantelis/Matcha)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/jakeantelis/Matcha)](https://github.com/jakeantelis/Matcha/releases)
+[![License](https://img.shields.io/github/license/jakeantelis/Matcha)](LICENSE)
+[![Platform](https://img.shields.io/badge/macOS-11%2B-2f6f4f)]()
+[![Built with Swift](https://img.shields.io/badge/Swift-AppKit-F05138)]()
 
 <p align="center">
-  <img src="docs/shot-idle-card2.png" width="260" alt="Matcha idle — ready to keep your Mac awake">
-  <img src="docs/shot-active-card2.png" width="260" alt="Matcha active — keeping your Mac awake">
+  <img src="docs/shot-idle-card2.png" width="240" alt="Matcha idle — sleep allowed">
+  <img src="docs/shot-active-card2.png" width="240" alt="Matcha active — steeping">
+  <img src="docs/shot-agent-card.png" width="240" alt="Matcha detecting running coding agents">
 </p>
 
-<p align="center"><b>Works with</b> · Claude Code · Codex · Cursor · opencode · Aider · Gemini CLI · Windsurf</p>
+<p align="center"><b>Works with</b> · Claude Code · Codex · Cursor · opencode · Aider · Gemini CLI · Windsurf · <i>and 40+ more</i></p>
 
-<p align="center"><img src="docs/demo.gif" width="320" alt="Matcha in action"></p>
-
-Tiny macOS app with a floating timer, menu bar controls, global hotkeys, CLI, and agent skill. Keeps your display on and lock screen away while builds, exports, or AI coding agents run. Crash-safe and scriptable.
-
-## Why Matcha
-
-Most keep-awake tools only stop idle sleep. Matcha also keeps the display on and
-the lock screen away, restores timed sessions after a crash, and detects when a
-build or coding agent is running so it can offer to stay awake — then lets agents
-report long jobs themselves with `matcha run -- <cmd>` instead of holding your Mac
-awake forever.
+Matcha is a tiny menu-bar utility that keeps your display on and the lock screen
+away while builds, exports, or AI coding agents run. It looks like a tea timer —
+because that's all it is — but it's built for the people who actually leave
+machines working overnight.
 
 ## Install
-
-One command:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/install.sh | sh
 ```
 
-This downloads the latest release, verifies its SHA-256, installs it to
-`/Applications`, opens it, and configures any coding agents it finds. Rerun the
-same command to update. Skip the agent setup with `| sh -s -- --no-agents`.
+One command. It downloads the latest release, verifies its SHA-256, installs to
+`/Applications`, launches it, and configures your coding agents. Rerun it any
+time to update. Skip agent setup with `| sh -s -- --no-agents`.
 
-Requires macOS 11 or later. Universal binary for Apple silicon and Intel.
-Allow notifications when macOS asks; that is how the five-minute warning and
-agent prompts reach you.
+Requires **macOS 11+** (universal — Apple silicon and Intel). Allow notifications
+for the five-minute warning and agent prompts.
 
-**Not notarized.** Ad-hoc signed, not notarized by Apple. The one-command installer
-removes quarantine automatically. For manual downloads, right-click → Open or
-**System Settings → Privacy & Security → Open Anyway**. Notarization may come
-later if there's demand.
+> **Not notarized.** Ad-hoc signed for now. The installer strips quarantine
+> automatically; for manual downloads use right-click → Open. Notarization and a
+> Homebrew cask land once an Apple Developer ID is available.
 
-<details>
-<summary>Manual install</summary>
+## What it does
 
-```sh
-curl -fL https://github.com/jakeantelis/Matcha/releases/latest/download/Matcha.zip -o /tmp/Matcha.zip
-unzip -qo /tmp/Matcha.zip -d /Applications
-xattr -dr com.apple.quarantine /Applications/Matcha.app 2>/dev/null || true
-open /Applications/Matcha.app
-```
+- **Steep a session** — one click, or pick `2h` / `4h` / ∞, or type `90m`, `2h 30m`, `until 6pm`.
+- **Tea-fill timer** — a matcha-green ring fills and a soft steam rises as time drains; the countdown lives in the ring, a floating badge, and the menu bar.
+- **Display + lock screen** — prevents the screen saver *and* lock screen, not just idle sleep (`caffeinate -d -u` + IOPM assertions).
+- **Watches your work** — detects running coding agents and paused builds, then offers to stay awake. Lists them: *“opencode · Claude Code are running.”*
+- **Agents can self-serve** — `matcha run -- ./build.sh` stays awake for exactly as long as the command runs.
+- **Crash-safe** — timed sessions resume after a crash or force-quit; a normal Quit ends them.
+- **Battery guard** — stops at 20% on battery.
+- **Schedules + watch-lists** — “until 6pm” or “stay awake while Logic Pro / Blender is open.”
+- **Shortcuts & AppleScript** — fully scriptable via `matcha://` URL scheme and the `matchactl` CLI.
 
-The app is ad-hoc signed, not notarized. If Gatekeeper warns on first launch,
-right-click the app and choose **Open**, or allow it under
-**System Settings → Privacy & Security → Open Anyway**.
+## Why not just use Amphetamine / Caffeinate?
 
-</details>
+| | **Matcha** | Amphetamine | Caffeinate |
+|---|:---:|:---:|:---:|
+| Keeps screen + lock screen awake | ✅ | ✅ | ⚠️ |
+| **Detects your coding agents** | ✅ | — | — |
+| **Agent skill + CLI (`matcha run`)** | ✅ | — | — |
+| **Tea-fill timer / floating badge** | ✅ | — | — |
+| Schedules & triggers | ✅ (until-time, watch-app) | ✅ | — |
+| Shortcuts / AppleScript | ✅ | ✅ | — |
+| Price | Free · OSS · MIT | Free + paid tier | Free · OSS |
 
-## Use
+Matcha is for the developer/export operator between midnight builds. If you just
+want a blanket caffeinate, `caffeinate` is fine. If you want a **quiet, green,
+agent-aware** timer that restores itself — that's Matcha.
 
-Click the ring to start or stop. Pick a preset (2h, 4h, 8h, ∞) or type a
-duration such as `8`, `90m`, `2.5h`, `1d`, or `2h 30m`.
-
-- **Floating indicator** — drag it anywhere; click or right-click for quick
-  controls. Size it under **Indicator Size**. Double-click when active adds
-  30 minutes, Option-click stops. Tags along across Spaces.
-- **Menu bar** — optional icon with the same controls, plus an optional live
-  countdown (**Show Time in Menu Bar**).
-- **Ending warning** — five minutes before a session ends, Matcha offers
-  **Add 1 Hour** or **Stop**. If a watched build is still running, it extends
-  30 minutes automatically.
-- **Display unlock** — prevents the screen saver and lock screen, not just
-  idle sleep.
-- **Crash-safe** — timed sessions resume after a crash or force-quit; an
-  intentional Quit ends the session.
-- **Battery guard** — stops at 20% on battery (laptops only).
-- **Auto-keep awake for code** — if you step away while a real build or encode
-  tool is running, Matcha offers to stay awake. Idle AI apps are ignored on
-  purpose; agents should report long jobs explicitly via the CLI.
-- Launch at login, light/dark/system appearance.
+## Quick tour
 
 | Shortcut | Action |
 | --- | --- |
-| `⌃⌥⌘M` | Start or stop |
+| `⌃⌥⌘M` | Start / stop |
 | `⌃⌥⌘1` | Start one hour |
 
-## Automation
-
 ```sh
-matchactl on            # until stopped
-matchactl on 2          # 2 hours
-matchactl extend 1      # add an hour
-matchactl off
-matchactl toggle
-matchactl status        # -> on (3598s left) / coding activity: true
-matcha run -- npm test  # keep awake, run command, auto-stop
+matcha on 2            # steep for 2 hours
+matcha run -- npm test # stay awake, run, auto-stop
+matcha status --json   # machine-readable state
 ```
 
-The CLI lives inside the bundle, so it works without a PATH setup:
+Live status is written to `~/Library/Application Support/Matcha/status.plist`.
+The CLI lives inside the bundle, so it works with no PATH setup — perfect for
+agents and shell scripts.
 
-```sh
-/Applications/Matcha.app/Contents/Resources/matchactl status
-```
+## Coding agents
 
-URL scheme:
+Matcha ships an installable skill/instructions for Claude Code, opencode, Codex,
+Gemini, Windsurf, Cursor, Aider and more. It detects **43 built-in agents**
+(and anything you add) and can start a session before long work, then stop it —
+leaving any session *you* started untouched.
 
-```sh
-open -g "matcha://on?hours=2"
-open -g "matcha://on?minutes=45"
-open -g "matcha://extend?hours=1"
-open -g "matcha://off"
-open -g "matcha://toggle"
-```
+Missing one? Settings → **Add Coding Agent…**, or drop process names into
+`~/Library/Application Support/Matcha/agents.txt`. Detection is local; nothing
+leaves your Mac.
 
-`-g` keeps Matcha in the background. Live status is written to
-`~/Library/Application Support/Matcha/status.plist` for tooling.
+## Updates
 
-### Shortcuts & AppleScript
-
-Matcha is reachable from **Shortcuts** with a single *Open URL* action:
-
-```
-matcha://on?hours=2
-matcha://on?minutes=45
-matcha://off
-matcha://toggle
-```
-
-Or use *Run Shell Script* for anything the CLI does:
-
-```sh
-/Applications/Matcha.app/Contents/Resources/matchactl on 2     # 2 hours
-/Applications/Matcha.app/Contents/Resources/matcha run -- ./deploy.sh
-```
-
-AppleScript:
-
-```applescript
-do shell script "/Applications/Matcha.app/Contents/Resources/matchactl on 2"
-```
-
-## Agents
-
-The installer configures every agent it can find, using a managed block that is
-safe to re-run:
-
-| Agent | What it configures |
-| --- | --- |
-| Claude Code | `~/.claude/skills/matcha-keep-awake/SKILL.md` |
-| opencode | `~/.config/opencode/skills/matcha-keep-awake/SKILL.md` |
-| Codex CLI | `~/.codex/AGENTS.md` |
-| Gemini CLI | `~/.gemini/GEMINI.md` |
-| Windsurf | `~/.codeium/windsurf/memories/global_rules.md` |
-
-Cursor and Aider load rules per project. Run this inside the repo:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/install-agent-kit.sh | sh -s -- --project
-```
-
-That adds `.cursor/rules/matcha-keep-awake.mdc` and appends the snippet to
-`CONVENTIONS.md`. For Zed or any other agent, paste
-[`Agent/instructions.md`](Agent/instructions.md) into its instructions.
-
-Agents start a session before long work and stop it afterwards, leaving any
-session you started yourself untouched.
-
-### Detected agents
-
-Matcha watches for 40+ agents and offers to stay awake when one is running:
-Claude Code, Codex, opencode, Aider, Cursor, Gemini CLI, Windsurf, Continue,
-Copilot, Cline, Roo Code, Augment, Crush, Amp, Goose, Ollama, Devin, OpenHands,
-Qwen Code, Kimi CLI, Kiro, Junie, Amazon Q, Cody, Tabnine, Tabby, Kilo Code,
-Plandex, Codebuff, Forge, Open Interpreter, GPT Engineer, AutoGPT, Letta,
-Agent Zero, Devika, Trae, Replit Agent, DeepSeek, gptme, RA.Aid, Kodu, and
-OpenChamber.
-
-If yours is missing, open the menu and choose **Add Coding Agent…**. You can also
-add process names to `~/Library/Application Support/Matcha/agents.txt`, one per
-line. Detection is local and never leaves your Mac.
-
-To add an agent to the built-in list for everyone, add it to
-`AgentRegistry.builtIn` in [`Sources/Support.swift`](Sources/Support.swift) and
-open a pull request.
-
-## Updating
-
-Rerun the install command. Matcha quits, updates, reopens, and resumes a running
-session. You can also use **Matcha → Check for Updates…** in the app menu.
-
-## Uninstalling
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/uninstall.sh | sh
-```
-
-This removes the app and the instructions it added to coding agents. Add
-`-s -- --yes --purge` to skip the prompt and delete preferences and session data
-too. Cursor/Aider project rules are left for you to review and delete.
+Checks on launch and once a day, then installs + restarts in one click — keeping
+your current session and settings exactly as they were.
 
 ## Privacy
 
-No accounts, analytics, or telemetry. The app makes one network request only
-when you choose **Check for Updates…**, and the installer contacts GitHub to
-download the release you asked for.
+No account, no analytics, no telemetry. The only network calls are updating and
+the install you asked for.
 
 ## Build from source
 
 ```sh
-./build.sh install     # build and install to /Applications/Matcha.app
-./build.sh build       # build only, into build/Matcha.app
-./build.sh package     # build + dist/Matcha.zip
+./build.sh install   # build → /Applications/Matcha.app
+./build.sh package   # build + dist/Matcha.zip
+./Tools/release.sh   # universal arm64+x86_64 + checksums
 ```
 
-This needs the Xcode Command Line Tools (`swiftc`). Built locally, the app is not
-quarantined and launches normally.
-
-Maintainer commands:
-
-```sh
-./Tools/release.sh            # universal build, zip + SHA-256
-./Tools/release.sh --publish  # same, then create the GitHub release
-swift Tools/make-icon.swift ./Resources   # regenerate the app icon
-```
-
-Preview renders:
-
-```sh
-build/Matcha.app/Contents/MacOS/Matcha --render panel-idle.png --idle
-build/Matcha.app/Contents/MacOS/Matcha --render panel-active.png
-build/Matcha.app/Contents/MacOS/Matcha --render-badge badge.png --active
-```
+Needs only the Xcode Command Line Tools (`swiftc`).
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) — free to use, fork, and ship.
