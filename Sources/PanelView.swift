@@ -56,10 +56,11 @@ final class PanelView: NSView {
         }
 
         activityDot.contentTintColor = state.triggerBusy ? Matcha.green : .tertiaryLabelColor
-        activityLabel.stringValue = state.triggerBusy ? "Code activity detected" : "No code activity"
+        activityLabel.stringValue = state.triggerBusy ? "Build/activity detected" : "No build activity"
         activityLabel.textColor = state.triggerBusy ? .secondaryLabelColor : .tertiaryLabelColor
 
         statusLabel.stringValue = state.active ? "Keeping awake" : "Sleep is allowed"
+        statusLabel.stringValue = state.active ? "Awake — display unlocked" : "Ready to keep your Mac awake"
         if state.active {
             detailLabel.stringValue = state.endDate != nil ? Fmt.remainingText(state) : "Until you stop"
         } else {

@@ -41,27 +41,39 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
 
     private func checkAgents() {
         guard !active else { return }
-        let procs = ["claude", "codex", "opencode", "aider", "roo", "cline", "continue", "copilot"]
-        var running = false
-        let task = Process()
-        task.launchPath = "/bin/ps"
-        task.arguments = ["-axo", "comm="]
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        try? task.run()
-        task.waitUntilExit()
-        if let data = try? pipe.fileHandleForReading.readToEnd(),
-           let out = String(data: data, encoding: .utf8) {
-            for p in procs {
-                if out.lowercased().contains(p) { running = true; break }
+        let procs = ["claude", "codex", "opencode", "aider", "roo", "cline", "continue", "copilot", "gemini"]
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let task = Process()
+            task.launchPath = "/bin/ps"
+            task.arguments = ["-axo", "comm="]
+            let pipe = Pipe()
+            task.standardOutput = pipe
+            do {
+                try task.run()
+                task.waitUntilExit()
+            } catch {
+                return
             }
-        }
-        if running {
-            let key = "lastAgentPrompt"
-            let last = UserDefaults.standard.double(forKey: key)
-            if Date().timeIntervalSince1970 - last > 1800 {
-                UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: key)
-                offerKeepAwakeAgent()
+            guard task.terminationStatus == 0,
+                  let data = try? pipe.fileHandleForReading.readToEnd(),
+                  let out = String(data: data, encoding: .utf8) else { return }
+            let lower = out.lowercased()
+            var running = false
+            for p in procs {
+                if lower.contains("/\(p)") || lower.hasSuffix(p) || lower.contains(" \(p)") {
+                    running = true
+                    break
+                }
+            }
+            guard running else { return }
+            DispatchQueue.main.async {
+                guard let self = self, !self.active else { return }
+                let key = "lastAgentPrompt"
+                let last = UserDefaults.standard.double(forKey: key)
+                if Date().timeIntervalSince1970 - last > 1800 {
+                    UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: key)
+                    self.offerKeepAwakeAgent()
+                }
             }
         }
     }
@@ -422,12 +434,13 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private func createStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
-            button.image = symbolImage(["mug", "cup.and.saucer"])
+            button.image = symbolImage(["cup.and.saucer.fill", "cup.and.saucer", "mug.fill", "mug"])
             button.imagePosition = .imageLeading
             button.font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
             button.action = #selector(statusClicked)
             button.target = self
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+            button.toolTip = "Matcha"
         }
         statusItem = item
     }
