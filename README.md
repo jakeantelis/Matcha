@@ -1,7 +1,7 @@
 # Matcha
 
-Keep your Mac awake — and your screen unlocked — while builds, tests, downloads,
-or agent runs finish. A tiny macOS app with a floating timer, menu bar controls,
+Keep your Mac awake — and your screen unlocked — while builds, exports, tests,
+and AI coding agents run. A tiny macOS app with a floating timer, menu bar controls,
 global hotkeys, a CLI, and an agent skill.
 
 <p align="center"><img src="docs/shot-idle-card2.png" width="280" alt="Matcha idle"> <img src="docs/shot-active-card2.png" width="280" alt="Matcha active with green wash"></p>
