@@ -60,10 +60,21 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
                   let out = String(data: data, encoding: .utf8) else { return }
 
             let interpreters: Set<String> = ["node", "bun", "deno", "python", "python3", "python3.11", "python3.12", "ruby"]
-            let markers = [
-                "claude-code", "@anthropic-ai/claude", "/claude ",
-                "opencode", "/codex", "aider", "cursor-agent", "gemini-cli",
-                "goose", "crush", "windsurf", "continue-cli",
+            let markers: [(marker: String, key: String)] = [
+                ("claude-code", "claude"), ("@anthropic-ai/claude", "claude"), ("/claude ", "claude"),
+                ("opencode", "opencode"), ("/codex", "codex"), ("aider", "aider"),
+                ("cursor-agent", "cursor-agent"), ("gemini-cli", "gemini-cli"),
+                ("goose", "goose"), ("crush", "crush"), ("windsurf", "windsurf"),
+                ("continue-cli", "continue"), ("openhands", "openhands"),
+                ("swe-agent", "swe-agent"), ("qwen", "qwen"), ("kimi", "kimi"),
+                ("kiro", "kiro"), ("junie", "junie"), ("amazon-q", "amazon-q"),
+                ("cody", "cody"), ("tabnine", "tabnine"), ("tabby", "tabby"),
+                ("kilo", "kilo"), ("plandex", "plandex"), ("codebuff", "codebuff"),
+                ("forgecode", "forgecode"), ("open-interpreter", "open-interpreter"),
+                ("gpt-engineer", "gpt-engineer"), ("autogpt", "autogpt"),
+                ("letta", "letta"), ("agent-zero", "agent-zero"), ("devika", "devika"),
+                ("trae", "trae"), ("replit", "replit"), ("deepseek", "deepseek"),
+                ("gptme", "gptme"), ("ra-aid", "ra-aid"), ("kodu", "kodu"),
             ]
             let editorApps: Set<String> = ["claude", "cursor", "windsurf", "copilot", "codex", "gemini"]
             let ignoredPaths = [
@@ -88,18 +99,8 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
                     matched = name
                     break
                 }
-                if interpreters.contains(name), let marker = markers.first(where: { args.contains($0) }) {
-                    let key = marker.contains("opencode") ? "opencode"
-                        : marker.contains("codex") ? "codex"
-                        : marker.contains("claude") ? "claude"
-                        : marker.contains("cursor") ? "cursor-agent"
-                        : marker.contains("gemini") ? "gemini-cli"
-                        : marker.contains("aider") ? "aider"
-                        : marker.contains("goose") ? "goose"
-                        : marker.contains("crush") ? "crush"
-                        : marker.contains("windsurf") ? "windsurf"
-                        : "continue"
-                    matched = key
+                if interpreters.contains(name), let entry = markers.first(where: { args.contains($0.marker) }) {
+                    matched = entry.key
                     break
                 }
             }

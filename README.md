@@ -139,9 +139,12 @@ session you started yourself untouched.
 
 ### Detected agents
 
-Matcha watches for these agents and offers to stay awake when one is running:
+Matcha watches for 40+ agents and offers to stay awake when one is running:
 Claude Code, Codex, opencode, Aider, Cursor, Gemini CLI, Windsurf, Continue,
-Copilot, Cline, Roo Code, Augment, Crush, Amp, Goose, Ollama, and Devin.
+Copilot, Cline, Roo Code, Augment, Crush, Amp, Goose, Ollama, Devin, OpenHands,
+Qwen Code, Kimi CLI, Kiro, Junie, Amazon Q, Cody, Tabnine, Tabby, Kilo Code,
+Plandex, Codebuff, Forge, Open Interpreter, GPT Engineer, AutoGPT, Letta,
+Agent Zero, Devika, Trae, Replit Agent, DeepSeek, gptme, RA.Aid, and Kodu.
 
 If yours is missing, open the menu and choose **Add Coding Agent…**. You can also
 add process names to `~/Library/Application Support/Matcha/agents.txt`, one per
