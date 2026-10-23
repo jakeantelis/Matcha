@@ -114,7 +114,9 @@ final class RingButton: NSView {
         } else if hovering {
             accent.withAlphaComponent(0.35).setStroke()
         } else {
-            NSColor.quaternaryLabelColor.setStroke()
+            NSColor.tertiaryLabelColor.setStroke()
+            var dash: [CGFloat] = [1.5, 5]
+            track.setLineDash(&dash, count: dash.count, phase: 0)
         }
         track.stroke()
 

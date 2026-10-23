@@ -15,13 +15,19 @@ final class PanelView: NSView {
     private let titleLabel = NSTextField(labelWithString: "Matcha")
     private let gear = NSButton()
     private let durationInput = DurationInputView()
-    private let activityDot = NSImageView()
     private let activityLabel = NSTextField(labelWithString: "")
-    private let cursorLabel = NSTextField(labelWithString: "\u{2588}")
+    private let cursorLabel = NSTextField(labelWithString: "_")
     private let activityRow = NSStackView()
+    private let separator = NSView()
     private var presetChips: [PillButton] = []
     private let tint = TintView()
     private var activityPulseTimer: Timer?
+    private var marqueeTimer: Timer?
+    private var marqueeBase = ""
+    private var marqueeOffset = 0
+    private var marqueeCap = 0
+    private var marqueeColor = NSColor.secondaryLabelColor
+    private var marqueeGlow = false
 
     private let panelWidth: CGFloat = 320
     private let pad: CGFloat = 20
@@ -63,7 +69,6 @@ final class PanelView: NSView {
             chip.textColor = selected ? .white : .labelColor
         }
 
-        activityDot.contentTintColor = activeBusy ? brightGreen : .tertiaryLabelColor
         let activityText: String
         if state.triggerBusy {
             activityText = "build or export activity"
@@ -77,19 +82,21 @@ final class PanelView: NSView {
             activityText = "no build or agent activity"
         }
         let activityColor = activeBusy ? brightGreen : NSColor.secondaryLabelColor
-        var activityAttrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont(name: "Menlo-Regular", size: 11) ?? NSFont.monospacedSystemFont(ofSize: 11, weight: .regular),
-            .foregroundColor: activityColor,
-            .kern: 0.5,
-        ]
-        if activeBusy {
-            let shadow = NSShadow()
-            shadow.shadowColor = brightGreen.withAlphaComponent(0.9)
-            shadow.shadowBlurRadius = 5
-            shadow.shadowOffset = .zero
-            activityAttrs[.shadow] = shadow
+
+        let cap = 44
+        if activityText.count > cap, animationsEnabled(), state.agentNames.count > 2 {
+            marqueeBase = activityText
+            marqueeCap = cap
+            marqueeColor = activityColor
+            marqueeGlow = activeBusy
+            marqueeOffset = marqueeBase.count - 1
+            renderMarqueeTick()
+            startMarquee()
+        } else {
+            stopMarquee()
+            activityLabel.attributedStringValue = activityAttributed(activityText, color: activityColor, glow: activeBusy, centered: true)
         }
-        activityLabel.attributedStringValue = NSAttributedString(string: activityText, attributes: activityAttrs)
+
         activityRow.layer?.backgroundColor = activeBusy
             ? NSColor(calibratedRed: 0.05, green: 0.09, blue: 0.07, alpha: 0.92).cgColor
             : NSColor.quaternaryLabelColor.withAlphaComponent(0.5).cgColor
@@ -101,16 +108,67 @@ final class PanelView: NSView {
             stopActivityPulse()
         }
 
+        let showFooter = state.active || busy
+        activityRow.isHidden = !showFooter
+        separator.isHidden = !showFooter
+
         statusLabel.stringValue = state.active ? "Steeping · display unlocked" : "Sleep allowed"
         if state.active {
+            detailLabel.isHidden = false
             detailLabel.stringValue = state.endDate != nil ? Fmt.remainingText(state) : "Until you stop"
         } else {
-            detailLabel.stringValue = "Your Mac can sleep normally"
+            detailLabel.isHidden = true
+            detailLabel.stringValue = ""
         }
         cupIcon.image = matchaMark(size: 18, active: state.active)
     }
 
     @objc private func gearClicked() { onMenu?(gear) }
+
+    private func activityAttributed(_ text: String, color: NSColor, glow: Bool, centered: Bool) -> NSAttributedString {
+        var attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont(name: "Menlo-Regular", size: 11) ?? NSFont.monospacedSystemFont(ofSize: 11, weight: .regular),
+            .foregroundColor: color,
+        ]
+        if centered {
+            let paragraph = NSMutableParagraphStyle()
+            paragraph.alignment = .center
+            attrs[.paragraphStyle] = paragraph
+        }
+        if glow {
+            let shadow = NSShadow()
+            shadow.shadowColor = brightGreen.withAlphaComponent(0.9)
+            shadow.shadowBlurRadius = 5
+            shadow.shadowOffset = .zero
+            attrs[.shadow] = shadow
+        }
+        return NSAttributedString(string: text, attributes: attrs)
+    }
+
+    private func startMarquee() {
+        guard marqueeTimer == nil else { return }
+        let timer = Timer(timeInterval: 0.3, repeats: true) { [weak self] _ in
+            self?.renderMarqueeTick()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        marqueeTimer = timer
+    }
+
+    private func stopMarquee() {
+        marqueeTimer?.invalidate()
+        marqueeTimer = nil
+    }
+
+    private func renderMarqueeTick() {
+        guard marqueeBase.count > 0, marqueeCap > 0 else { return }
+        marqueeOffset = (marqueeOffset + 1) % marqueeBase.count
+        let doubled = marqueeBase + "   " + marqueeBase
+        let start = doubled.index(doubled.startIndex, offsetBy: marqueeOffset)
+        let end = doubled.index(start, offsetBy: marqueeCap)
+        var window = String(doubled[start..<end])
+        while window.count < marqueeCap { window += " " }
+        activityLabel.attributedStringValue = activityAttributed(window, color: marqueeColor, glow: marqueeGlow, centered: false)
+    }
 
     private func startActivityPulse() {
         guard activityPulseTimer == nil, animationsEnabled() else { return }
@@ -133,6 +191,7 @@ final class PanelView: NSView {
 
     deinit {
         activityPulseTimer?.invalidate()
+        marqueeTimer?.invalidate()
     }
 
     func setTintEnabled(_ enabled: Bool) {
@@ -231,13 +290,6 @@ final class PanelView: NSView {
         chips.spacing = 8
         chips.widthAnchor.constraint(equalToConstant: inner).isActive = true
 
-        activityDot.image = symbolImage(["circle.fill"])?
-            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 6, weight: .regular))
-        activityDot.contentTintColor = .tertiaryLabelColor
-        activityDot.translatesAutoresizingMaskIntoConstraints = false
-        activityDot.widthAnchor.constraint(equalToConstant: 8).isActive = true
-        activityDot.heightAnchor.constraint(equalToConstant: 8).isActive = true
-
         activityLabel.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
         activityLabel.textColor = .tertiaryLabelColor
         activityLabel.lineBreakMode = .byTruncatingTail
@@ -247,17 +299,15 @@ final class PanelView: NSView {
         cursorLabel.alphaValue = 0
 
         activityRow.orientation = .horizontal
-        activityRow.alignment = .centerY
+        activityRow.alignment = .firstBaseline
         activityRow.spacing = 5
         activityRow.edgeInsets = NSEdgeInsets(top: 4, left: 9, bottom: 4, right: 10)
-        activityRow.addArrangedSubview(activityDot)
         activityRow.addArrangedSubview(activityLabel)
         activityRow.addArrangedSubview(cursorLabel)
         activityRow.wantsLayer = true
         activityRow.layer?.cornerRadius = 10
         activityRow.layer?.backgroundColor = NSColor.quaternaryLabelColor.withAlphaComponent(0.5).cgColor
 
-        let separator = NSView()
         separator.wantsLayer = true
         separator.layer?.backgroundColor = NSColor.separatorColor.withAlphaComponent(0.6).cgColor
         separator.translatesAutoresizingMaskIntoConstraints = false
