@@ -18,7 +18,7 @@ Matcha is a tiny macOS menu-bar utility that keeps your display on and lock scre
 
 ## Install
 
-**Tech-savvy?** One command — done:
+One command — done:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/install.sh | sh
