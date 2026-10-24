@@ -82,15 +82,22 @@ Whichever you choose — visual floater, menu bar, hotkeys, or pure CLI — Matc
 
 ## How it compares
 
-| | **Matcha** | Amphetamine | Caffeinate |
-|---|:---:|:---:|:---:|
-| Keeps screen + lock screen awake | ✅ | ✅ | ⚠️ |
-| **Detects your coding agents** | ✅ | — | — |
-| **Agent CLI (`matcha run`)** | ✅ | — | — |
-| **Floating badge / tea timer** | ✅ | — | — |
-| Schedules + watch-lists | ✅ | ✅ | — |
-| Shortcuts / AppleScript | ✅ | ✅ | — |
-| Price | Free · OSS · MIT | Free + paid tier | Free · OSS |
+| Feature / Capability | **Matcha** | Amphetamine | Caffeinate (CLI) |
+| :--- | :---: | :---: | :---: |
+| **Keeps Screen + Lock Screen Awake** | ✅ | ✅ | ⚠️ *(Requires flags `-d -u`)* |
+| **Detects AI Coding Agents** (44+ built-in) | ✅ | ❌ | ❌ |
+| **Agent CLI (`matcha run -- <cmd>`)** | ✅ | ❌ | ⚠️ *(Manual syntax)* |
+| **Tea-Fill Visual Timer & Floating Badge** | ✅ | ❌ *(Menu bar only)* | ❌ |
+| **Schedules & Watch-Lists** | ✅ | ✅ | ❌ |
+| **Saved Session Templates** | ✅ | ❌ | ❌ |
+| **Idle Auto-Stop** | ✅ | ❌ | ❌ |
+| **Network & Clamshell Guards** | ✅ | ❌ | ❌ |
+| **Quick Command Palette (`⌃⌥⌘K`)** | ✅ | ❌ | ❌ |
+| **Post-Session Actions** (Sound / Sleep) | ✅ | ❌ | ❌ |
+| **Tabbed Local Analytics & Stats** | ✅ | ❌ | ❌ |
+| **Shortcuts, Apple Intents & xbar** | ✅ | ✅ | ❌ |
+| **App Architecture** | Zero-deps Native Swift | Native AppKit | Built-in macOS Tool |
+| **Price & License** | Free · OSS · MIT | Free + Paid Tier | Free · OSS |
 
 ## Coding agents
 
