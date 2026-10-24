@@ -27,6 +27,9 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private var ticker: Timer?
     private var assertionID: IOPMAssertionID = 0
     private var displayAssertionID: IOPMAssertionID = 0
+    private var networkAssertionID: IOPMAssertionID = 0
+    private var clamshellAssertionID: IOPMAssertionID = 0
+    private var commandPaletteController: CommandPaletteWindowController?
     private var displayKeepAlive: Timer?
     private var caffeinateProcess: Process?
     private var batteryTimer: Timer?
@@ -34,6 +37,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private var warnedEnding = false
     private var agentTimer: Timer?
     private var watchTimer: Timer?
+    private var scheduleTimer: Timer?
     private var watchAutoActive = false
     private var agentAutoActive = false
     private var sessionAutoStarted = false
@@ -184,6 +188,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         }
         stopBatteryGuard()
         stopWatchApps()
+        scheduleTimer?.invalidate()
         releaseAssertions()
     }
 
@@ -239,6 +244,24 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             self?.autoUpdateCheck()
         }
 
+        NotificationCenter.default.addObserver(forName: Notification.Name("MatchaPaletteStop"), object: nil, queue: .main) { [weak self] _ in self?.stop() }
+        NotificationCenter.default.addObserver(forName: Notification.Name("MatchaPaletteStatus"), object: nil, queue: .main) { [weak self] _ in
+            guard let self else { return }
+            self.showWindow()
+            NSApp.activate(ignoringOtherApps: true)
+        }
+        NotificationCenter.default.addObserver(forName: Notification.Name("MatchaPaletteStartTemplate"), object: nil, queue: .main) { [weak self] notif in
+            guard let name = notif.object as? String, let t = TemplateStore.all.first(where: { $0.name == name }) else { return }
+            self?.start(duration: t.isEndless ? nil : t.durationSeconds)
+        }
+        NotificationCenter.default.addObserver(forName: Notification.Name("MatchaPaletteStartDuration"), object: nil, queue: .main) { [weak self] notif in
+            guard let dur = notif.object as? TimeInterval else { return }
+            self?.start(duration: dur)
+        }
+        NotificationCenter.default.addObserver(forName: Notification.Name("MatchaPaletteStartEndless"), object: nil, queue: .main) { [weak self] _ in
+            self?.start(duration: nil)
+        }
+
         NotificationCenter.default.addObserver(forName: .matchaPrefsChanged, object: nil, queue: .main) { [weak self] _ in
             guard let self else { return }
             self.applyPreferences()
@@ -251,6 +274,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         }
 
         startWatchApps()
+        startScheduleChecker()
 
         let show = DispatchWorkItem { [weak self] in
             self?.showWindow()
@@ -342,7 +366,22 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         let startOK = hotKeys.register(keyCode: UInt32(kVK_ANSI_1), modifiers: modifiers) { [weak self] in
             self?.start(duration: 3600)
         }
-        hotKeysRegistered = toggleOK && startOK
+        let showOK = hotKeys.register(keyCode: UInt32(kVK_ANSI_N), modifiers: modifiers) { [weak self] in
+            guard let self else { return }
+            if self.window?.isVisible == true {
+                self.window?.orderOut(nil)
+            } else {
+                self.showWindow()
+            }
+        }
+        let paletteOK = hotKeys.register(keyCode: UInt32(kVK_ANSI_K), modifiers: modifiers) { [weak self] in
+            guard let self else { return }
+            if self.commandPaletteController == nil {
+                self.commandPaletteController = CommandPaletteWindowController()
+            }
+            self.commandPaletteController?.showWindow(nil)
+        }
+        hotKeysRegistered = toggleOK && startOK && showOK && paletteOK
     }
 
     private func offerKeepAwake() {
@@ -594,7 +633,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         if let event = NSApp.currentEvent,
            event.type == .rightMouseUp || event.modifierFlags.contains(.option),
            let button = statusItem?.button {
-            presentMenu(from: button)
+            presentQuickMenu(from: button)
         } else if popover.isShown {
             popover.performClose(nil)
         } else if let button = statusItem?.button {
@@ -603,6 +642,47 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
                 popover.contentViewController?.view.window?.makeFirstResponder(panel)
             }
         }
+    }
+
+    private func presentQuickMenu(from view: NSView) {
+        let menu = NSMenu()
+
+        if active {
+            let stop = NSMenuItem(title: "Stop", action: #selector(togglePower(_:)), keyEquivalent: "")
+            stop.target = self
+            menu.addItem(stop)
+
+            menu.addItem(timeItem("+15 Min", seconds: 900))
+            menu.addItem(timeItem("+30 Min", seconds: 1800))
+            menu.addItem(timeItem("+1 Hour", seconds: 3600))
+        } else {
+            let start = NSMenuItem(title: "Start", action: #selector(togglePower(_:)), keyEquivalent: "")
+            start.target = self
+            menu.addItem(start)
+            menu.addItem(timeItem("Start 1 Hour", seconds: 3600))
+            menu.addItem(timeItem("Start 2 Hours", seconds: 7200))
+            menu.addItem(timeItem("Start 4 Hours", seconds: 14400))
+
+            let templates = TemplateStore.all
+            if !templates.isEmpty {
+                let sub = NSMenuItem(title: "Templates", action: nil, keyEquivalent: "")
+                let subMenu = NSMenu()
+                for template in templates {
+                    let item = NSMenuItem(title: template.name, action: #selector(startTemplate(_:)), keyEquivalent: "")
+                    item.target = self
+                    item.representedObject = template.name
+                    subMenu.addItem(item)
+                }
+                sub.submenu = subMenu
+                menu.addItem(sub)
+            }
+        }
+
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "Open Window", action: #selector(showWindow), keyEquivalent: "")
+        menu.addItem(withTitle: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+
+        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: view.bounds.height + 6), in: view)
     }
 
     private func applyAppearance() {
@@ -761,6 +841,9 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         let hint2 = NSMenuItem(title: "\u{2303}\u{2325}\u{2318}1 one hour", action: nil, keyEquivalent: "")
         hint2.isEnabled = false
         menu.addItem(hint2)
+        let hint3 = NSMenuItem(title: "\u{2303}\u{2325}\u{2318}N show window", action: nil, keyEquivalent: "")
+        hint3.isEnabled = false
+        menu.addItem(hint3)
         menu.addItem(.separator())
 
         let openItem = NSMenuItem(title: "Open Window", action: #selector(showWindow), keyEquivalent: "")
@@ -1033,6 +1116,12 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         extend(by: seconds)
     }
 
+    @objc private func startTemplate(_ sender: NSMenuItem) {
+        guard let name = sender.representedObject as? String else { return }
+        guard let template = TemplateStore.all.first(where: { $0.name == name }) else { return }
+        start(duration: template.isEndless ? nil : template.durationSeconds)
+    }
+
     private func extend(by seconds: TimeInterval) {
         guard active, endDate != nil else {
             start(duration: seconds)
@@ -1236,6 +1325,37 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         watchTimer = nil
     }
 
+    private func startScheduleChecker() {
+        guard scheduleTimer == nil else { return }
+        let timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            self?.checkSchedules()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        scheduleTimer = timer
+        checkSchedules()
+    }
+
+    private func checkSchedules() {
+        let now = Date()
+        let schedules = ScheduleStore.all
+        guard !schedules.isEmpty else { return }
+
+        for schedule in schedules {
+            if schedule.appliesTo(date: now) {
+                if !active {
+                    sessionSource = "schedule:\(schedule.name)"
+                    start(duration: schedule.isEndless ? nil : schedule.durationSeconds, auto: true)
+                    let content = UNMutableNotificationContent()
+                    content.title = "Matcha started"
+                    content.body = "Scheduled session \"\(schedule.name)\" started"
+                    content.sound = .default
+                    UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "matcha.schedule.\(UUID().uuidString)", content: content, trigger: nil))
+                }
+                return
+            }
+        }
+    }
+
     private func checkWatchApps() {
         let names = (UserDefaults.standard.stringArray(forKey: Pref.watchApps) ?? [])
             .map { $0.lowercased().trimmingCharacters(in: .whitespaces) }
@@ -1323,7 +1443,13 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     }
 
     private func tick() {
-        guard active, let end = endDate else { return }
+        guard active else { return }
+        checkIdleAutoStop()
+
+        guard let end = endDate else {
+            refreshAll()
+            return
+        }
         let remaining = end.timeIntervalSinceNow
         if remaining <= 0 {
             stop()
@@ -1335,6 +1461,24 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             warnSessionEnding()
         }
         refreshAll()
+    }
+
+    private func checkIdleAutoStop() {
+        guard UserDefaults.standard.bool(forKey: Pref.idleAutoStop),
+              !sessionAutoStarted,
+              !triggerBusy,
+              !agentRunning
+        else { return }
+        let threshold = TimeInterval(UserDefaults.standard.integer(forKey: Pref.idleAutoStopMinutes))
+        guard threshold > 0 else { return }
+        if triggers.idleSeconds() >= threshold * 60 {
+            stop()
+            let content = UNMutableNotificationContent()
+            content.title = "Matcha auto-stopped"
+            content.body = "No activity for \(Int(threshold)) minutes. Tap the ring to start again."
+            content.sound = .default
+            UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "matcha.idle.\(UUID().uuidString)", content: content, trigger: nil))
+        }
     }
 
     private func warnSessionEnding() {
@@ -1433,7 +1577,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
               let status = Battery.status(),
               status.onBattery,
               status.percent > 0,
-              status.percent <= 20
+              status.percent <= UserDefaults.standard.integer(forKey: Pref.batteryThreshold)
         else { return }
 
         stop()
@@ -1459,6 +1603,28 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         }
         if UserDefaults.standard.bool(forKey: Pref.keepDisplayOn) {
             startDisplayKeepAlive()
+        }
+        if UserDefaults.standard.bool(forKey: Pref.networkGuard) {
+            var netID: IOPMAssertionID = 0
+            if IOPMAssertionCreateWithName(
+                "NetworkClientActive" as CFString,
+                IOPMAssertionLevel(kIOPMAssertionLevelOn),
+                reason,
+                &netID
+            ) == kIOReturnSuccess {
+                networkAssertionID = netID
+            }
+        }
+        if UserDefaults.standard.bool(forKey: Pref.clamshellMode) {
+            var clamID: IOPMAssertionID = 0
+            if IOPMAssertionCreateWithName(
+                kIOPMAssertionTypePreventSystemSleep as CFString,
+                IOPMAssertionLevel(kIOPMAssertionLevelOn),
+                reason,
+                &clamID
+            ) == kIOReturnSuccess {
+                clamshellAssertionID = clamID
+            }
         }
     }
 
@@ -1513,6 +1679,14 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             IOPMAssertionRelease(assertionID)
             assertionID = 0
         }
+        if networkAssertionID != 0 {
+            IOPMAssertionRelease(networkAssertionID)
+            networkAssertionID = 0
+        }
+        if clamshellAssertionID != 0 {
+            IOPMAssertionRelease(clamshellAssertionID)
+            clamshellAssertionID = 0
+        }
         stopDisplayKeepAlive()
     }
 
@@ -1566,15 +1740,31 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
 
     private func updateStatusItem() {
         guard let button = statusItem?.button else { return }
+
+        let endingSoon = active && endDate != nil && endDate!.timeIntervalSinceNow <= 300
+
         button.image = symbolImage(
             active
                 ? ["cup.and.saucer.fill", "cup.and.saucer", "mug.fill", "mug"]
                 : ["leaf.fill", "leaf", "cup.and.saucer"]
         )
-        button.contentTintColor = active ? Matcha.green : NSColor.tertiaryLabelColor
+
+        if endingSoon {
+            let blink = Int(Date().timeIntervalSince1970) % 2 == 0
+            button.contentTintColor = blink
+                ? NSColor.systemOrange
+                : Matcha.green.withAlphaComponent(0.4)
+        } else {
+            button.contentTintColor = active ? Matcha.green : NSColor.tertiaryLabelColor
+        }
+
         let showTime = UserDefaults.standard.bool(forKey: Pref.menuBarCountdown)
         if active, showTime {
-            button.title = endDate.map { " " + Fmt.clockShort($0.timeIntervalSinceNow) } ?? " \u{221E}"
+            if endingSoon {
+                button.title = endDate.map { " \u{26A1}" + Fmt.clockShort($0.timeIntervalSinceNow) } ?? " \u{221E}"
+            } else {
+                button.title = endDate.map { " " + Fmt.clockShort($0.timeIntervalSinceNow) } ?? " \u{221E}"
+            }
             button.toolTip = active && endDate != nil ? "Matcha — \(Fmt.clock(endDate!.timeIntervalSinceNow)) left" : (active ? "Matcha — Until you stop" : "Matcha — Ready")
         } else {
             button.title = ""

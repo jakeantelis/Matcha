@@ -58,8 +58,13 @@ The app is ad-hoc signed, not notarized. The installer strips quarantine automat
 - **Agent-aware** — detects 44+ coding agents and lists the active ones: *“opencode · Claude Code are running.”*
 - **CLI & scripting** — `matcha run -- <cmd>` stays awake for exactly as long as the command runs.
 - **Crash-safe** — timed sessions resume after a crash or force-quit; a normal Quit ends them.
-- **Battery guard** — stops at 20% on battery.
-- **Watch-lists & schedules** — stay awake while an app (e.g. Blender, Logic Pro) is running, or until a set clock time.
+- **Battery guard** — stops at user-adjustable threshold (default 20%) on battery.
+- **Watch-lists, schedules & templates** — stay awake while an app runs, at scheduled days/times, or with saved one-click session templates.
+- **Idle auto-stop** — automatically stops if your Mac has been idle for a configured number of minutes.
+- **Shortcuts & App Intents** — full Siri and Shortcuts support for starting, stopping, toggling, extending, and checking status.
+- **xbar plugin** — integration for xbar / BitBar menu bar monitoring and control.
+- **Network & Clamshell Guard** — Optional network sleep prevention (`NetworkClientActive`) and clamshell/lid-closed wake support when connected to power/display.
+- **Quick Command Palette** — Spotlight-style instant launcher (`⌃⌥⌘K`) to type durations, templates, or commands.
 - **In-app updates** — checks on launch + daily; one-click install & restart keeps your session and mode.
 
 ## Control it your way
@@ -68,7 +73,7 @@ The app is ad-hoc signed, not notarized. The installer strips quarantine automat
 | --- | --- |
 | **Menu bar** | Click the cup icon → popover, or `⌘,` for the Settings window |
 | **Floating badge** | Drag it anywhere; click for controls, right-click for quick actions |
-| **Hotkeys** | `⌃⌥⌘M` toggle · `⌃⌥⌘1` start 1 hour |
+| **Hotkeys** | `⌃⌥⌘M` toggle · `⌃⌥⌘1` start 1 hour · `⌃⌥⌘N` show/hide window · `⌃⌥⌘K` command palette |
 | **CLI** | `matcha on 2h` · `matcha off` · `matcha run -- ./build.sh` · `matcha watch` |
 | **URL / AppleScript** | `open -g "matcha://on?hours=2"` |
 

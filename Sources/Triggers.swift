@@ -118,7 +118,7 @@ final class TriggerMonitor {
         return (user + system + nice, user + system + nice + idle)
     }
 
-    private func idleSeconds() -> TimeInterval {
+    func idleSeconds() -> TimeInterval {
         let port: mach_port_t
         if #available(macOS 12.0, *) {
             port = kIOMainPortDefault

@@ -51,5 +51,14 @@ check("history source", SessionHistory.all[0].source, "manual")
 SessionHistory.clear()
 check("history empty after clear 2", SessionHistory.all.count, 0)
 
+// --- SessionTemplate & Schedule ---
+let template = SessionTemplate(name: "Test", durationSeconds: 3600, isEndless: false)
+check("template name", template.name, "Test")
+check("template duration", template.durationSeconds, 3600)
+
+let schedule = Schedule(name: "Build", weekdays: [1, 2, 3, 4, 5], hour: 9, minute: 0, durationSeconds: 7200, isEndless: false)
+check("schedule name", schedule.name, "Build")
+check("schedule hour", schedule.hour, 9)
+
 print(failures == 0 ? "ALL TESTS PASSED" : "\(failures) TEST(S) FAILED")
 exit(failures == 0 ? 0 : 1)

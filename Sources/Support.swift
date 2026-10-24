@@ -1,6 +1,16 @@
 import AppKit
 import IOKit.ps
 
+extension NSView {
+    func findSubview(withIdentifier id: NSUserInterfaceItemIdentifier) -> NSView? {
+        if identifier == id { return self }
+        for sub in subviews {
+            if let found = sub.findSubview(withIdentifier: id) { return found }
+        }
+        return nil
+    }
+}
+
 extension Notification.Name {
     static let matchaPrefsChanged = Notification.Name("matchaPrefsChanged")
 }
@@ -86,6 +96,13 @@ enum Pref {
     static let awakeTodayDate = "awakeTodayDate"
     static let showInDock = "showInDock"
     static let sessionHistory = "sessionHistory"
+    static let batteryThreshold = "batteryThreshold"
+    static let idleAutoStop = "idleAutoStop"
+    static let idleAutoStopMinutes = "idleAutoStopMinutes"
+    static let sessionTemplates = "sessionTemplates"
+    static let schedules = "schedules"
+    static let networkGuard = "networkGuard"
+    static let clamshellMode = "clamshellMode"
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -103,6 +120,11 @@ enum Pref {
             firstRunHintShown: false,
             autoStartAgents: false,
             showInDock: true,
+            batteryThreshold: 20,
+            idleAutoStop: false,
+            idleAutoStopMinutes: 10,
+            networkGuard: false,
+            clamshellMode: false,
         ])
     }
 }
@@ -428,5 +450,85 @@ enum SessionHistory {
 
     static func clear() {
         UserDefaults.standard.removeObject(forKey: Pref.sessionHistory)
+    }
+}
+
+struct SessionTemplate: Codable, Equatable {
+    let name: String
+    let durationSeconds: TimeInterval
+    let isEndless: Bool
+}
+
+enum TemplateStore {
+    static var all: [SessionTemplate] {
+        guard let data = UserDefaults.standard.data(forKey: Pref.sessionTemplates),
+              let templates = try? JSONDecoder().decode([SessionTemplate].self, from: data)
+        else { return [] }
+        return templates
+    }
+
+    static func save(_ templates: [SessionTemplate]) {
+        if let data = try? JSONEncoder().encode(templates) {
+            UserDefaults.standard.set(data, forKey: Pref.sessionTemplates)
+        }
+    }
+
+    static func add(_ template: SessionTemplate) {
+        var templates = all
+        if let idx = templates.firstIndex(where: { $0.name == template.name }) {
+            templates[idx] = template
+        } else {
+            templates.append(template)
+        }
+        save(templates)
+    }
+
+    static func remove(named name: String) {
+        save(all.filter { $0.name != name })
+    }
+}
+
+struct Schedule: Codable, Equatable {
+    let name: String
+    let weekdays: [Int]
+    let hour: Int
+    let minute: Int
+    let durationSeconds: TimeInterval
+    let isEndless: Bool
+
+    func appliesTo(date: Date) -> Bool {
+        let cal = Calendar.current
+        let weekday = cal.component(.weekday, from: date) - 1
+        guard weekdays.contains(weekday) else { return false }
+        return cal.component(.hour, from: date) == hour && cal.component(.minute, from: date) == minute
+    }
+}
+
+enum ScheduleStore {
+    static var all: [Schedule] {
+        guard let data = UserDefaults.standard.data(forKey: Pref.schedules),
+              let schedules = try? JSONDecoder().decode([Schedule].self, from: data)
+        else { return [] }
+        return schedules
+    }
+
+    static func save(_ schedules: [Schedule]) {
+        if let data = try? JSONEncoder().encode(schedules) {
+            UserDefaults.standard.set(data, forKey: Pref.schedules)
+        }
+    }
+
+    static func add(_ schedule: Schedule) {
+        var schedules = all
+        if let idx = schedules.firstIndex(where: { $0.name == schedule.name }) {
+            schedules[idx] = schedule
+        } else {
+            schedules.append(schedule)
+        }
+        save(schedules)
+    }
+
+    static func remove(named name: String) {
+        save(all.filter { $0.name != name })
     }
 }
