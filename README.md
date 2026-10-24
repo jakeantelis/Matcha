@@ -131,7 +131,19 @@ No accounts, analytics, or telemetry. The only network calls are updating and th
 ./Tools/release.sh   # universal arm64+x86_64 + checksums
 ```
 
-Needs only the Xcode Command Line Tools (`swiftc`). A Homebrew cask is provided in [`Casks/matcha.rb`](Casks/matcha.rb) (submit to `homebrew-cask` once notarized).
+Needs only the Xcode Command Line Tools (`swiftc`).
+
+### Homebrew
+
+The official cask is in review at [homebrew-cask#296800](https://github.com/Homebrew/homebrew-cask/pull/296800). Until it merges, use the tap:
+
+```sh
+brew tap jakeantelis/matcha
+brew trust jakeantelis/matcha
+brew install --cask matcha
+```
+
+The cask formula lives in [`Casks/matcha.rb`](Casks/matcha.rb).
 
 ## License
 
