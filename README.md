@@ -16,6 +16,28 @@
 
 Matcha is a tiny menu-bar utility that keeps your display on and lock screen away while builds, exports, or AI coding agents run. It looks like a tea timer, but it’s engineered for developers and operators who leave machines working overnight.
 
+
+## Raycast & Alfred
+
+### Raycast
+Matcha includes ready-to-use **Raycast Script Commands** in the [`Raycast/`](Raycast) directory:
+- `matcha-toggle.sh` — Toggle keep-awake state
+- `matcha-on.sh` — Start session (accepts optional duration like `2h` or `90m`)
+- `matcha-off.sh` — Allow sleep immediately
+- `matcha-status.sh` — View live status
+
+To use them in Raycast, simply add the `Raycast/` folder as a **Script Command Directory** in Raycast settings.
+
+### Alfred Workflow
+Create a blank Alfred workflow with:
+1. **Keyword Trigger**: `matcha` (with argument optional)
+2. **Run Script Action**: `/bin/zsh` with language shell and code:
+   ```zsh
+   /Applications/Matcha.app/Contents/Resources/matchactl {query}
+   ```
+Type `matcha on 2h`, `matcha off`, or `matcha status` instantly from Alfred.
+
+---
 ---
 
 ## Install
