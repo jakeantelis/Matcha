@@ -9,36 +9,12 @@
 
 <p align="center">
   <img src="docs/shot-idle-card2.png" width="260" alt="Matcha idle — sleep allowed">
-  <img src="docs/shot-active-card2.png" width="260" alt="Matcha active — steeping">
+  <img src="docs/shot-active-card2.png" width="260" alt="Matcha active — awake">
 </p>
 
-<p align="center"><b>Works with</b> · Claude Code · Codex · Cursor · opencode · Aider · Gemini CLI · Windsurf · <i>and 43+ more</i></p>
+<p align="center"><b>Works with</b> · Claude Code · Codex · Cursor · opencode · Aider · Gemini CLI · Windsurf · <i>and 44+ more</i></p>
 
-Matcha is a tiny menu-bar utility that keeps your display on and lock screen away while builds, exports, or AI coding agents run. It looks like a tea timer, but it’s engineered for developers and operators who leave machines working overnight.
-
-
-## Raycast & Alfred
-
-### Raycast
-Matcha includes ready-to-use **Raycast Script Commands** in the [`Raycast/`](Raycast) directory:
-- `matcha-toggle.sh` — Toggle keep-awake state
-- `matcha-on.sh` — Start session (accepts optional duration like `2h` or `90m`)
-- `matcha-off.sh` — Allow sleep immediately
-- `matcha-status.sh` — View live status
-
-To use them in Raycast, simply add the `Raycast/` folder as a **Script Command Directory** in Raycast settings.
-
-### Alfred Workflow
-Create a blank Alfred workflow with:
-1. **Keyword Trigger**: `matcha` (with argument optional)
-2. **Run Script Action**: `/bin/zsh` with language shell and code:
-   ```zsh
-   /Applications/Matcha.app/Contents/Resources/matchactl {query}
-   ```
-Type `matcha on 2h`, `matcha off`, or `matcha status` instantly from Alfred.
-
----
----
+Matcha is a tiny macOS menu-bar utility that keeps your display on and lock screen away while builds, exports, or AI coding agents run. See what's new in [`RELEASE_NOTES.md`](RELEASE_NOTES.md).
 
 ## Install
 
@@ -46,65 +22,104 @@ Type `matcha on 2h`, `matcha off`, or `matcha status` instantly from Alfred.
 curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/install.sh | sh
 ```
 
-One command installs Matcha to `/Applications`, launches it, and configures your coding agents. Rerun to update. Skip agent setup with `| sh -s -- --no-agents`.
+Installs to `/Applications`, launches, and configures your coding agents. Rerun to update; skip agent setup with `| sh -s -- --no-agents`.
 
-*Requires macOS 11+ (universal: Apple Silicon & Intel).*
+*Requires macOS 11+ (universal — Apple Silicon & Intel). Allow notifications for the ending warning and agent prompts.*
 
----
+<details>
+<summary>Manual install</summary>
 
-## What's New in v1.4.0
+```sh
+curl -fL https://github.com/jakeantelis/Matcha/releases/latest/download/Matcha.zip -o /tmp/Matcha.zip
+unzip -qo /tmp/Matcha.zip -d /Applications
+xattr -dr com.apple.quarantine /Applications/Matcha.app 2>/dev/null || true
+open /Applications/Matcha.app
+```
 
-- **Tea-fill Timer & Steam** — A rich green liquid fills the ring as time counts down, accompanied by gentle animated steam wisps.
-- **Matrix Agent Footer** — When active agents run, a terminal-style glowing green pill with a blinking cursor lists them: *“OpenChamber · Claude Code are running”* (with slow marquee scrolling for 3+ agents).
-- **Settings Window (`⌘,`)** — A full preferences window replacing cluttered menus: configure behavior, menu bar, floater, appearance, size, login items, custom agents, and view local awake usage stats.
-- **App-Store-Like Updates** — Auto-checks on launch and daily; one-click **Install & Restart** preserves your active session and mode seamlessly.
-- **Smart Scheduling** — Set sessions via preset chips (`2h`, `4h`, `∞`), natural language (`8h`, `90m`, `2.5h`), or clock time (`until 6pm`).
-- **App Watchlist** — Automatically keep awake while custom apps run (e.g., Logic Pro, Final Cut, Blender).
-- **Clean Off-Mode** — Muted grey idle state with a dotted ring track and hidden footer.
+The app is ad-hoc signed, not notarized. The installer strips quarantine automatically; for manual downloads use right-click → Open.
 
----
+</details>
 
-## Features & Quick Tour
+## Features
 
-| Feature | Description |
-| :--- | :--- |
-| **Display & Lock Screen** | Blocks screen saver and lock screen (`caffeinate -d -u` + IOPM assertions). |
-| **Floating Indicator** | Draggable badge with quick actions (double-click +30m, Option-click stop, translucent default). |
-| **CLI & Automation** | `matchactl on 2h`, `matchactl extend 30m`, `matcha status --json`, `matcha run -- <cmd>`. |
-| **Global Hotkeys** | `⌃⌥⌘M` (toggle), `⌃⌥⌘1` (start 1 hour). |
-| **Battery Guard** | Pauses automatically at 20% on battery. |
-| **Crash-Safe** | Timed sessions resume after crashes or force-quits. |
-| **Shortcuts & AppleScript** | Scriptable via `matcha://` URL scheme. |
+- **One-click sessions** — presets (`2h` / `4h` / ∞), natural language (`8h`, `90m`, `2.5h`, `8 hours`), or clock time (`until 6pm`).
+- **Tea-fill timer** — a matcha-green ring fills and steam rises while a session runs, with the live countdown in the ring, menu bar, and floating badge.
+- **Display + lock screen** — prevents the screen saver *and* lock screen, not just idle sleep (`caffeinate -d -u` + IOPM assertions).
+- **Floating indicator** — a draggable desktop badge with quick actions (double-click +30m, Option-click stop; translucent by default).
+- **Agent-aware** — detects 44+ coding agents and lists the active ones: *“opencode · Claude Code are running.”*
+- **CLI & scripting** — `matcha run -- <cmd>` stays awake for exactly as long as the command runs.
+- **Crash-safe** — timed sessions resume after a crash or force-quit; a normal Quit ends them.
+- **Battery guard** — stops at 20% on battery.
+- **Watch-lists & schedules** — stay awake while an app (e.g. Blender, Logic Pro) is running, or until a set clock time.
+- **In-app updates** — checks on launch + daily; one-click install & restart keeps your session and mode.
 
----
+## Control it your way
 
-## Why Matcha vs Others?
+| Way | How |
+| --- | --- |
+| **Menu bar** | Click the cup icon → popover, or `⌘,` for the Settings window |
+| **Floating badge** | Drag it anywhere; click for controls, right-click for quick actions |
+| **Hotkeys** | `⌃⌥⌘M` toggle · `⌃⌥⌘1` start 1 hour |
+| **CLI** | `matcha on 2h` · `matcha off` · `matcha run -- ./build.sh` · `matcha watch` |
+| **URL / AppleScript** | `open -g "matcha://on?hours=2"` |
+
+Whichever you choose — visual floater, menu bar, hotkeys, or pure CLI — Matcha has you covered.
+
+## Why not Amphetamine or Caffeinate?
 
 | | **Matcha** | Amphetamine | Caffeinate |
 |---|:---:|:---:|:---:|
 | Keeps screen + lock screen awake | ✅ | ✅ | ⚠️ |
-| **Detects 43+ AI coding agents** | ✅ | — | — |
-| **Agent skill + CLI (`matcha run`)** | ✅ | — | — |
-| **Tea-fill timer & animated badge** | ✅ | — | — |
-| Schedules (Until-Time & App Watch) | ✅ | ✅ | — |
+| **Detects your coding agents** | ✅ | — | — |
+| **Agent CLI (`matcha run`)** | ✅ | — | — |
+| **Floating badge / tea timer** | ✅ | — | — |
+| Schedules + watch-lists | ✅ | ✅ | — |
 | Shortcuts / AppleScript | ✅ | ✅ | — |
 | Price | Free · OSS · MIT | Free + paid tier | Free · OSS |
 
----
+## Coding agents
 
-## Coding Agents
+Matcha ships skills/instructions for Claude Code, opencode, Codex, Gemini, Windsurf, Cursor, and Aider, and detects **44 built-in agents** plus anything you add. Agents start sessions before long work and stop them afterwards — your own sessions stay untouched.
 
-Matcha detects **43 built-in agents** (Claude Code, opencode, Codex, Cursor, Aider, OpenChamber, etc.) plus any custom process names you add in Settings → **Add Coding Agent…** or `~/Library/Application Support/Matcha/agents.txt`.
+Missing one? Settings → **Add Coding Agent…**, or add names to `~/Library/Application Support/Matcha/agents.txt`.
 
-Agents start sessions before long tasks and stop them afterward, leaving your manually started sessions untouched.
+## Raycast & Alfred
 
----
+<details>
+<summary>Raycast script commands</summary>
 
-## Privacy & Build
+The [`Raycast/`](Raycast) folder contains ready-to-use commands — `matcha-toggle`, `matcha-on`, `matcha-off`, `matcha-status`. Point Raycast at the folder as a **Script Command Directory**.
 
-- **100% Local & Private** — No accounts, analytics, or telemetry. Network calls only occur when you check for updates or install.
-- **Build from Source** — `./build.sh install` builds locally using Xcode Command Line Tools (`swiftc`).
+</details>
+
+<details>
+<summary>Alfred workflow</summary>
+
+1. **Keyword** trigger: `matcha` (argument optional)
+2. **Run Script** (`/bin/zsh`):
+
+```zsh
+/Applications/Matcha.app/Contents/Resources/matchactl {query}
+```
+
+Type `matcha on 2h`, `matcha off`, or `matcha status` from Alfred.
+
+</details>
+
+## Privacy
+
+No accounts, analytics, or telemetry. The only network calls are updating and the install you asked for.
+
+## Build from source
+
+```sh
+./build.sh install   # build → /Applications/Matcha.app
+./build.sh package   # build + dist/Matcha.zip
+./Tools/release.sh   # universal arm64+x86_64 + checksums
+```
+
+Needs only the Xcode Command Line Tools (`swiftc`). A Homebrew cask is provided in [`Casks/matcha.rb`](Casks/matcha.rb) (submit to `homebrew-cask` once notarized).
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) — free to use, fork, and ship.
