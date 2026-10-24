@@ -36,6 +36,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private var watchTimer: Timer?
     private var watchAutoActive = false
     private var agentAutoActive = false
+    private var sessionAutoStarted = false
     private var lastWatchStop: Date?
 
     private func startAgentDetection() {
@@ -136,7 +137,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
                     if UserDefaults.standard.bool(forKey: Pref.autoStartAgents) {
                         if let last = self.lastWatchStop, Date().timeIntervalSince(last) < 300 { return }
                         self.agentAutoActive = true
-                        self.start(duration: nil)
+                        self.start(duration: nil, auto: true)
                         return
                     }
                     let key = "lastAgentPrompt"
@@ -145,7 +146,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
                         UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: key)
                         self.offerKeepAwakeAgent()
                     }
-                } else if !running, self.agentAutoActive {
+                } else if !running, self.agentAutoActive, self.sessionAutoStarted {
                     self.agentAutoActive = false
                     self.stop()
                 }
@@ -931,9 +932,22 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
                 let scriptText = """
                 #!/bin/sh
                 while pgrep -x Matcha >/dev/null 2>&1; do sleep 0.3; done
-                rm -rf "\(appPath)"
-                ditto "\(newApp.path)" "\(appPath)"
-                xattr -dr com.apple.quarantine "\(appPath)" 2>/dev/null || true
+                if [ ! -x "\(newApp.path)/Contents/MacOS/Matcha" ]; then
+                  rm -rf "\(tmp.path)"
+                  exit 1
+                fi
+                backup="\(appPath).matcha-backup"
+                rm -rf "$backup"
+                mv "\(appPath)" "$backup" || { rm -rf "\(tmp.path)"; exit 1; }
+                if ditto "\(newApp.path)" "\(appPath)"; then
+                  xattr -dr com.apple.quarantine "\(appPath)" 2>/dev/null || true
+                  rm -rf "$backup"
+                else
+                  rm -rf "\(appPath)"
+                  mv "$backup" "\(appPath)"
+                  rm -rf "\(tmp.path)"
+                  exit 1
+                fi
                 rm -rf "\(tmp.path)"
                 sleep 0.5
                 open "\(appPath)"
@@ -1146,6 +1160,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             active = true
             sessionStartedAt = Date()
         }
+        sessionAutoStarted = false
         duration = seconds
         endDate = end
         warnedEnding = false
@@ -1213,14 +1228,14 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         if running, !active {
             if let last = lastWatchStop, Date().timeIntervalSince(last) < 300 { return }
             watchAutoActive = true
-            start(duration: nil)
-        } else if !running, watchAutoActive {
+            start(duration: nil, auto: true)
+        } else if !running, watchAutoActive, sessionAutoStarted {
             watchAutoActive = false
             stop()
         }
     }
 
-    private func start(duration seconds: TimeInterval?) {
+    private func start(duration seconds: TimeInterval?, auto: Bool = false) {
         if !active {
             createAssertions()
             guard assertionID != 0 else {
@@ -1230,6 +1245,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             active = true
             sessionStartedAt = Date()
         }
+        sessionAutoStarted = auto
         duration = seconds
         endDate = seconds.map { Date().addingTimeInterval($0) }
         warnedEnding = false
@@ -1249,6 +1265,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         endDate = nil
         duration = nil
         warnedEnding = false
+        sessionAutoStarted = false
         stopBatteryGuard()
         lastWatchStop = Date()
         clearPersistedSession()

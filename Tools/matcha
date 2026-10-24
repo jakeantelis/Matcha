@@ -47,10 +47,18 @@ case "$cmd" in
       echo "usage: matcha run [--keep <duration>] -- <command> [args...]" >&2
       exit 1
     fi
-    "$MATCHA" on "$keep" >/dev/null 2>&1 || true
+    was_on=0
+    if "$MATCHA" status 2>/dev/null | head -1 | grep -q '^on '; then
+      was_on=1
+    fi
+    if [ "$was_on" = 0 ]; then
+      "$MATCHA" on "$keep" >/dev/null 2>&1 || true
+    fi
     "$@"
     rc=$?
-    "$MATCHA" off >/dev/null 2>&1 || true
+    if [ "$was_on" = 0 ]; then
+      "$MATCHA" off >/dev/null 2>&1 || true
+    fi
     exit $rc
     ;;
   watch)
