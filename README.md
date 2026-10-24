@@ -18,11 +18,15 @@ Matcha is a tiny macOS menu-bar utility that keeps your display on and lock scre
 
 ## Install
 
+**Tech-savvy?** One command — done:
+
 ```sh
 curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/install.sh | sh
 ```
 
 Installs to `/Applications`, launches, and configures your coding agents. Rerun to update; skip agent setup with `| sh -s -- --no-agents`.
+
+**Prefer the App Store?** Coming soon — watch the [releases page](https://github.com/jakeantelis/Matcha/releases) for the announcement.
 
 *Requires macOS 11+ (universal — Apple Silicon & Intel). Allow notifications for the ending warning and agent prompts.*
 
