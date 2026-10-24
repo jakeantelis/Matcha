@@ -35,6 +35,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private var agentTimer: Timer?
     private var watchTimer: Timer?
     private var watchAutoActive = false
+    private var agentAutoActive = false
     private var lastWatchStop: Date?
 
     private func startAgentDetection() {
@@ -131,12 +132,22 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
                     self.agentNames = order
                     self.refreshAll()
                 }
-                guard running, !self.active else { return }
-                let key = "lastAgentPrompt"
-                let last = UserDefaults.standard.double(forKey: key)
-                if Date().timeIntervalSince1970 - last > 1800 {
-                    UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: key)
-                    self.offerKeepAwakeAgent()
+                if running, !self.active {
+                    if UserDefaults.standard.bool(forKey: Pref.autoStartAgents) {
+                        if let last = self.lastWatchStop, Date().timeIntervalSince(last) < 300 { return }
+                        self.agentAutoActive = true
+                        self.start(duration: nil)
+                        return
+                    }
+                    let key = "lastAgentPrompt"
+                    let last = UserDefaults.standard.double(forKey: key)
+                    if Date().timeIntervalSince1970 - last > 1800 {
+                        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: key)
+                        self.offerKeepAwakeAgent()
+                    }
+                } else if !running, self.agentAutoActive {
+                    self.agentAutoActive = false
+                    self.stop()
                 }
             }
         }
@@ -664,6 +675,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         // Core
         menu.addItem(toggleItem("Keep Display On & Unlocked", Pref.keepDisplayOn, #selector(toggleKeepDisplay(_:))))
         menu.addItem(toggleItem("Auto-Keep Awake for Code", Pref.autoTriggers, #selector(toggleAutoTriggers(_:))))
+        menu.addItem(toggleItem("Auto-Start for Coding Agents", Pref.autoStartAgents, #selector(toggleAutoStartAgents(_:))))
         if Battery.hasBattery {
             menu.addItem(toggleItem("Low Battery Guard", Pref.batteryGuard, #selector(toggleBatteryGuard(_:))))
         }
@@ -737,6 +749,11 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             NSMenuItem(title: "Quit Matcha", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         )
         return menu
+    }
+
+    @objc private func toggleAutoStartAgents(_ sender: NSMenuItem) {
+        let value = !UserDefaults.standard.bool(forKey: Pref.autoStartAgents)
+        UserDefaults.standard.set(value, forKey: Pref.autoStartAgents)
     }
 
     @objc private func toggleAnimations(_ sender: NSMenuItem) {

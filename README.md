@@ -84,7 +84,15 @@ Whichever you choose — visual floater, menu bar, hotkeys, or pure CLI — Matc
 
 ## Coding agents
 
-Matcha ships skills/instructions for Claude Code, opencode, Codex, Gemini, Windsurf, Cursor, and Aider, and detects **44 built-in agents** plus anything you add. Agents start sessions before long work and stop them afterwards — your own sessions stay untouched.
+Matcha ships skills/instructions for Claude Code, opencode, Codex, Gemini, Windsurf, Cursor, and Aider, and detects **44 built-in agents** plus anything you add.
+
+**How detection works — you pick the level:**
+
+| Mode | Behavior |
+| --- | --- |
+| **Detect & prompt** *(default)* | When an agent is running, Matcha sends a notification: *"Keep your Mac awake?"* — tap **Keep Awake** to start. Never turns on by itself. |
+| **Auto-start** | Settings → **Auto-Start for Coding Agents** — Matcha starts the moment an agent appears and stops when the last one quits (waits a few minutes after a manual stop so it doesn't fight you). |
+| **Self-serve** | Agents use `matcha run -- <cmd>` to stay awake for exactly the duration of the command. |
 
 Missing one? Settings → **Add Coding Agent…**, or add names to `~/Library/Application Support/Matcha/agents.txt`.
 

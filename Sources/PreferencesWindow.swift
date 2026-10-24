@@ -45,6 +45,7 @@ final class PreferencesWindowController: NSObject {
         header("Behavior")
         checkbox("Keep Display On & Unlocked", Pref.keepDisplayOn)
         checkbox("Auto-Keep Awake for Code", Pref.autoTriggers)
+        checkbox("Auto-Start for Coding Agents", Pref.autoStartAgents)
         if Battery.hasBattery {
             checkbox("Low Battery Guard", Pref.batteryGuard)
         }

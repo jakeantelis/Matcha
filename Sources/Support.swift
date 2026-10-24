@@ -79,6 +79,7 @@ enum Pref {
     static let showTips = "showTips"
     static let animations = "animations"
     static let firstRunHintShown = "firstRunHintShown"
+    static let autoStartAgents = "autoStartAgents"
     static let watchApps = "watchApps"
     static let awakeTotal = "awakeTotal"
     static let awakeToday = "awakeToday"
@@ -98,6 +99,7 @@ enum Pref {
             showTips: false,
             animations: true,
             firstRunHintShown: false,
+            autoStartAgents: false,
         ])
     }
 }
