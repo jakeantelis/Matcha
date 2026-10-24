@@ -103,6 +103,7 @@ enum Pref {
     static let schedules = "schedules"
     static let networkGuard = "networkGuard"
     static let clamshellMode = "clamshellMode"
+    static let postSessionAction = "postSessionAction"
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -125,6 +126,7 @@ enum Pref {
             idleAutoStopMinutes: 10,
             networkGuard: false,
             clamshellMode: false,
+            postSessionAction: "none",
         ])
     }
 }

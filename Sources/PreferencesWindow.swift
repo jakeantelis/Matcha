@@ -8,6 +8,7 @@ final class PreferencesWindowController: NSObject {
     private let todayLabel = NSTextField(labelWithString: "")
     private let totalLabel = NSTextField(labelWithString: "")
     private let historyLabel = NSTextField(labelWithString: "")
+    private let statsCardLabel = NSTextField(labelWithString: "")
 
     func show() {
         if window == nil {
@@ -20,37 +21,130 @@ final class PreferencesWindowController: NSObject {
     }
 
     private func makeWindow() -> NSWindow {
-        let content = NSView(frame: NSRect(x: 0, y: 0, width: 340, height: 560))
+        let panel = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 440, height: 480),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        panel.title = "Matcha Settings"
+        panel.titlebarAppearsTransparent = false
 
+        let tabView = NSTabView(frame: NSRect(x: 0, y: 0, width: 440, height: 480))
+        tabView.translatesAutoresizingMaskIntoConstraints = false
+
+        let t1 = NSTabViewItem(identifier: "general")
+        t1.label = "General"
+        let t2 = NSTabViewItem(identifier: "power")
+        t2.label = "Power & Behavior"
+        let t3 = NSTabViewItem(identifier: "automation")
+        t3.label = "Automation"
+        let t4 = NSTabViewItem(identifier: "analytics")
+        t4.label = "Analytics"
+
+        tabView.addTabViewItem(t1)
+        tabView.addTabViewItem(t2)
+        tabView.addTabViewItem(t3)
+        tabView.addTabViewItem(t4)
+
+        populateGeneralTab(tabView.tabViewItems[0])
+        populatePowerTab(tabView.tabViewItems[1])
+        populateAutomationTab(tabView.tabViewItems[2])
+        populateAnalyticsTab(tabView.tabViewItems[3])
+
+        panel.contentView?.addSubview(tabView)
+        NSLayoutConstraint.activate([
+            tabView.topAnchor.constraint(equalTo: panel.contentView!.topAnchor),
+            tabView.leadingAnchor.constraint(equalTo: panel.contentView!.leadingAnchor),
+            tabView.trailingAnchor.constraint(equalTo: panel.contentView!.trailingAnchor),
+            tabView.bottomAnchor.constraint(equalTo: panel.contentView!.bottomAnchor)
+        ])
+
+        return panel
+    }
+
+    private func makeScrollView(with stack: NSStackView) -> NSScrollView {
+        let scroll = NSScrollView()
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        scroll.hasVerticalScroller = true
+        scroll.documentView = stack
+        return scroll
+    }
+
+    private func makeStack() -> NSStackView {
         let stack = NSStackView()
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 6
+        stack.spacing = 8
+        stack.edgeInsets = NSEdgeInsets(top: 20, left: 24, bottom: 20, right: 24)
         stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }
 
-        func header(_ text: String) {
-            let label = NSTextField(labelWithString: text)
-            label.font = NSFont.systemFont(ofSize: 11, weight: .semibold)
-            label.textColor = .secondaryLabelColor
-            stack.addArrangedSubview(label)
-            stack.setCustomSpacing(2, after: label)
+    private func header(_ text: String, in stack: NSStackView) {
+        let label = NSTextField(labelWithString: text)
+        label.font = NSFont.systemFont(ofSize: 11, weight: .semibold)
+        label.textColor = .secondaryLabelColor
+        stack.addArrangedSubview(label)
+        stack.setCustomSpacing(2, after: label)
+    }
+
+    private func checkbox(_ title: String, _ key: String, in stack: NSStackView) {
+        let button = NSButton(checkboxWithTitle: title, target: self, action: #selector(toggled(_:)))
+        button.identifier = NSUserInterfaceItemIdentifier(key)
+        button.state = UserDefaults.standard.bool(forKey: key) ? .on : .off
+        stack.addArrangedSubview(button)
+    }
+
+    private func populateGeneralTab(_ item: NSTabViewItem) {
+        let stack = makeStack()
+
+        header("Display & UI", in: stack)
+        checkbox("Show in Menu Bar", Pref.showMenuBarIcon, in: stack)
+        checkbox("Show Time in Menu Bar", Pref.menuBarCountdown, in: stack)
+        checkbox("Show in Dock", Pref.showInDock, in: stack)
+        checkbox("Show Floating Indicator", Pref.showFloatingIndicator, in: stack)
+        checkbox("Translucent Indicator", Pref.translucentIndicator, in: stack)
+        checkbox("Animations", Pref.animations, in: stack)
+        checkbox("Show Tips", Pref.showTips, in: stack)
+
+        header("Appearance", in: stack)
+        let appearance = NSPopUpButton(frame: .zero, pullsDown: false)
+        appearance.addItems(withTitles: ["Match System", "Light", "Dark"])
+        let currentAppearance = UserDefaults.standard.string(forKey: Pref.appearance) ?? "system"
+        appearance.selectItem(at: ["system", "light", "dark"].firstIndex(of: currentAppearance) ?? 0)
+        appearance.target = self
+        appearance.action = #selector(appearanceChanged(_:))
+        stack.addArrangedSubview(appearance)
+
+        let size = NSPopUpButton(frame: .zero, pullsDown: false)
+        size.addItems(withTitles: ["Small", "Medium", "Large"])
+        let currentSize = UserDefaults.standard.string(forKey: Pref.badgeSize) ?? "medium"
+        size.selectItem(at: ["small", "medium", "large"].firstIndex(of: currentSize) ?? 1)
+        size.target = self
+        size.action = #selector(sizeChanged(_:))
+        stack.addArrangedSubview(size)
+
+        if #available(macOS 13.0, *) {
+            header("System", in: stack)
+            let login = NSButton(checkboxWithTitle: "Launch at Login", target: self, action: #selector(loginToggled(_:)))
+            login.state = SMAppService.mainApp.status == .enabled ? .on : .off
+            stack.addArrangedSubview(login)
         }
 
-        func checkbox(_ title: String, _ key: String) {
-            let button = NSButton(checkboxWithTitle: title, target: self, action: #selector(toggled(_:)))
-            button.identifier = NSUserInterfaceItemIdentifier(key)
-            button.state = UserDefaults.standard.bool(forKey: key) ? .on : .off
-            stack.addArrangedSubview(button)
-        }
+        item.view = makeScrollView(with: stack)
+    }
 
-        header("Behavior")
-        checkbox("Keep Display On & Unlocked", Pref.keepDisplayOn)
-        checkbox("Auto-Keep Awake for Code", Pref.autoTriggers)
-        checkbox("Auto-Start for Coding Agents", Pref.autoStartAgents)
-        checkbox("Network / Wi-Fi Guard", Pref.networkGuard)
-        checkbox("Clamshell / Lid-Closed Support", Pref.clamshellMode)
+    private func populatePowerTab(_ item: NSTabViewItem) {
+        let stack = makeStack()
+
+        header("Power & Sleep Guards", in: stack)
+        checkbox("Keep Display On & Unlocked", Pref.keepDisplayOn, in: stack)
+        checkbox("Network / Wi-Fi Guard", Pref.networkGuard, in: stack)
+        checkbox("Clamshell / Lid-Closed Support", Pref.clamshellMode, in: stack)
+
         if Battery.hasBattery {
-            checkbox("Low Battery Guard", Pref.batteryGuard)
+            checkbox("Low Battery Guard", Pref.batteryGuard, in: stack)
 
             let batteryRow = NSStackView()
             batteryRow.orientation = .horizontal
@@ -79,7 +173,7 @@ final class PreferencesWindowController: NSObject {
             stack.addArrangedSubview(batteryRow)
         }
 
-        checkbox("Idle Auto-Stop", Pref.idleAutoStop)
+        checkbox("Idle Auto-Stop", Pref.idleAutoStop, in: stack)
 
         let idleRow = NSStackView()
         idleRow.orientation = .horizontal
@@ -107,40 +201,26 @@ final class PreferencesWindowController: NSObject {
 
         stack.addArrangedSubview(idleRow)
 
-        header("Menu Bar & Floater")
-        checkbox("Show in Menu Bar", Pref.showMenuBarIcon)
-        checkbox("Show Time in Menu Bar", Pref.menuBarCountdown)
-        checkbox("Show in Dock", Pref.showInDock)
-        checkbox("Show Floating Indicator", Pref.showFloatingIndicator)
-        checkbox("Translucent Indicator", Pref.translucentIndicator)
-        checkbox("Animations", Pref.animations)
+        header("Post-Session Action", in: stack)
+        let postAction = NSPopUpButton(frame: .zero, pullsDown: false)
+        postAction.addItems(withTitles: ["None", "Play Sound", "Sleep Mac"])
+        let currentPost = UserDefaults.standard.string(forKey: Pref.postSessionAction) ?? "none"
+        postAction.selectItem(at: ["none", "sound", "sleep"].firstIndex(of: currentPost) ?? 0)
+        postAction.target = self
+        postAction.action = #selector(postActionChanged(_:))
+        stack.addArrangedSubview(postAction)
 
-        header("Appearance")
-        let appearance = NSPopUpButton(frame: .zero, pullsDown: false)
-        appearance.addItems(withTitles: ["Match System", "Light", "Dark"])
-        let currentAppearance = UserDefaults.standard.string(forKey: Pref.appearance) ?? "system"
-        appearance.selectItem(at: ["system", "light", "dark"].firstIndex(of: currentAppearance) ?? 0)
-        appearance.target = self
-        appearance.action = #selector(appearanceChanged(_:))
-        stack.addArrangedSubview(appearance)
+        item.view = makeScrollView(with: stack)
+    }
 
-        let size = NSPopUpButton(frame: .zero, pullsDown: false)
-        size.addItems(withTitles: ["Small", "Medium", "Large"])
-        let currentSize = UserDefaults.standard.string(forKey: Pref.badgeSize) ?? "medium"
-        size.selectItem(at: ["small", "medium", "large"].firstIndex(of: currentSize) ?? 1)
-        size.target = self
-        size.action = #selector(sizeChanged(_:))
-        stack.addArrangedSubview(size)
+    private func populateAutomationTab(_ item: NSTabViewItem) {
+        let stack = makeStack()
 
-        if #available(macOS 13.0, *) {
-            let login = NSButton(checkboxWithTitle: "Launch at Login", target: self, action: #selector(loginToggled(_:)))
-            login.state = SMAppService.mainApp.status == .enabled ? .on : .off
-            stack.addArrangedSubview(login)
-        }
+        header("Coding Agents", in: stack)
+        checkbox("Auto-Keep Awake for Code", Pref.autoTriggers, in: stack)
+        checkbox("Auto-Start for Coding Agents", Pref.autoStartAgents, in: stack)
 
-        header("Agents & Automation")
-        checkbox("Show Tips", Pref.showTips)
-
+        header("Watch Apps", in: stack)
         let watchLabel = NSTextField(labelWithString: "Keep awake while these apps run (comma separated):")
         watchLabel.font = NSFont.systemFont(ofSize: 11)
         watchLabel.textColor = .secondaryLabelColor
@@ -149,19 +229,18 @@ final class PreferencesWindowController: NSObject {
         let watchField = NSTextField()
         watchField.placeholderString = "e.g. Logic Pro, Final Cut Pro, Blender"
         watchField.stringValue = (UserDefaults.standard.stringArray(forKey: Pref.watchApps) ?? []).joined(separator: ", ")
+        watchField.translatesAutoresizingMaskIntoConstraints = false
+        watchField.widthAnchor.constraint(equalToConstant: 360).isActive = true
         watchField.target = self
         watchField.action = #selector(watchAppsChanged(_:))
-        watchField.translatesAutoresizingMaskIntoConstraints = false
-        watchField.widthAnchor.constraint(equalToConstant: 280).isActive = true
         stack.addArrangedSubview(watchField)
 
-        header("Session Templates")
-
+        header("Session Templates", in: stack)
         let templates = TemplateStore.all
         let templateField = NSTextField()
         templateField.placeholderString = "Template name (e.g. Morning Build)"
         templateField.translatesAutoresizingMaskIntoConstraints = false
-        templateField.widthAnchor.constraint(equalToConstant: 280).isActive = true
+        templateField.widthAnchor.constraint(equalToConstant: 360).isActive = true
         templateField.identifier = NSUserInterfaceItemIdentifier("templateName")
         stack.addArrangedSubview(templateField)
 
@@ -169,12 +248,12 @@ final class PreferencesWindowController: NSObject {
         durationRow.orientation = .horizontal
         durationRow.alignment = .centerY
         durationRow.spacing = 6
-        durationRow.widthAnchor.constraint(equalToConstant: 280).isActive = true
 
         let templateDuration = NSTextField()
         templateDuration.placeholderString = "e.g. 4h, 90m"
         templateDuration.translatesAutoresizingMaskIntoConstraints = false
         templateDuration.identifier = NSUserInterfaceItemIdentifier("templateDuration")
+        templateDuration.widthAnchor.constraint(equalToConstant: 160).isActive = true
         durationRow.addArrangedSubview(templateDuration)
 
         let endlessCheck = NSButton(checkboxWithTitle: "Endless", target: self, action: #selector(toggled(_:)))
@@ -193,8 +272,7 @@ final class PreferencesWindowController: NSObject {
         templateLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
         templateLabel.textColor = .secondaryLabelColor
         templateLabel.maximumNumberOfLines = 0
-        templateLabel.cell?.truncatesLastVisibleLine = false
-        templateLabel.widthAnchor.constraint(equalToConstant: 280).isActive = true
+        templateLabel.widthAnchor.constraint(equalToConstant: 360).isActive = true
         templateLabel.identifier = NSUserInterfaceItemIdentifier("templateList")
         stack.addArrangedSubview(templateLabel)
 
@@ -202,12 +280,11 @@ final class PreferencesWindowController: NSObject {
         deleteTemplate.bezelStyle = .rounded
         stack.addArrangedSubview(deleteTemplate)
 
-        header("Schedules")
-
+        header("Schedules", in: stack)
         let schedNameField = NSTextField()
         schedNameField.placeholderString = "Schedule name (e.g. Morning Build)"
         schedNameField.translatesAutoresizingMaskIntoConstraints = false
-        schedNameField.widthAnchor.constraint(equalToConstant: 280).isActive = true
+        schedNameField.widthAnchor.constraint(equalToConstant: 360).isActive = true
         schedNameField.identifier = NSUserInterfaceItemIdentifier("scheduleName")
         stack.addArrangedSubview(schedNameField)
 
@@ -220,7 +297,6 @@ final class PreferencesWindowController: NSObject {
         let dayRow = NSStackView()
         dayRow.orientation = .horizontal
         dayRow.spacing = 4
-        dayRow.widthAnchor.constraint(equalToConstant: 280).isActive = true
         for (i, day) in dayNames.enumerated() {
             let btn = NSButton(checkboxWithTitle: day, target: self, action: #selector(scheduleDayToggled(_:)))
             btn.identifier = NSUserInterfaceItemIdentifier("day\(i)")
@@ -232,12 +308,6 @@ final class PreferencesWindowController: NSObject {
         timeRow.orientation = .horizontal
         timeRow.alignment = .centerY
         timeRow.spacing = 8
-        timeRow.widthAnchor.constraint(equalToConstant: 280).isActive = true
-
-        let timeLabel = NSTextField(labelWithString: "At:")
-        timeLabel.font = NSFont.systemFont(ofSize: 11)
-        timeLabel.textColor = .secondaryLabelColor
-        timeRow.addArrangedSubview(timeLabel)
 
         let timeField = NSTextField()
         timeField.placeholderString = "9:00"
@@ -245,11 +315,6 @@ final class PreferencesWindowController: NSObject {
         timeField.identifier = NSUserInterfaceItemIdentifier("scheduleTime")
         timeField.widthAnchor.constraint(equalToConstant: 60).isActive = true
         timeRow.addArrangedSubview(timeField)
-
-        let durLabel = NSTextField(labelWithString: "Duration:")
-        durLabel.font = NSFont.systemFont(ofSize: 11)
-        durLabel.textColor = .secondaryLabelColor
-        timeRow.addArrangedSubview(durLabel)
 
         let schedDurField = NSTextField()
         schedDurField.placeholderString = "4h"
@@ -262,11 +327,11 @@ final class PreferencesWindowController: NSObject {
         schedEndless.identifier = NSUserInterfaceItemIdentifier("scheduleEndless")
         timeRow.addArrangedSubview(schedEndless)
 
-        stack.addArrangedSubview(timeRow)
-
         let saveSchedule = NSButton(title: "Save Schedule", target: self, action: #selector(saveSchedule(_:)))
         saveSchedule.bezelStyle = .rounded
-        stack.addArrangedSubview(saveSchedule)
+        timeRow.addArrangedSubview(saveSchedule)
+
+        stack.addArrangedSubview(timeRow)
 
         let scheduleLabel = NSTextField(labelWithString: ScheduleStore.all.isEmpty ? "No schedules set" : ScheduleStore.all.map { s in
             let days = s.weekdays.map { dayNames[$0] }.joined(separator: ",")
@@ -276,8 +341,7 @@ final class PreferencesWindowController: NSObject {
         scheduleLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
         scheduleLabel.textColor = .secondaryLabelColor
         scheduleLabel.maximumNumberOfLines = 0
-        scheduleLabel.cell?.truncatesLastVisibleLine = false
-        scheduleLabel.widthAnchor.constraint(equalToConstant: 280).isActive = true
+        scheduleLabel.widthAnchor.constraint(equalToConstant: 360).isActive = true
         scheduleLabel.identifier = NSUserInterfaceItemIdentifier("scheduleList")
         stack.addArrangedSubview(scheduleLabel)
 
@@ -285,108 +349,97 @@ final class PreferencesWindowController: NSObject {
         deleteSchedule.bezelStyle = .rounded
         stack.addArrangedSubview(deleteSchedule)
 
-        header("Usage")
-        todayLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
-        totalLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
+        item.view = makeScrollView(with: stack)
+    }
+
+    private func populateAnalyticsTab(_ item: NSTabViewItem) {
+        let stack = makeStack()
+
+        header("Usage Summary", in: stack)
+        todayLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .medium)
+        totalLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .medium)
+        statsCardLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
+        statsCardLabel.textColor = .secondaryLabelColor
+        statsCardLabel.maximumNumberOfLines = 0
+
         stack.addArrangedSubview(todayLabel)
         stack.addArrangedSubview(totalLabel)
+        stack.addArrangedSubview(statsCardLabel)
 
-        header("Recent Sessions")
+        header("Recent Sessions", in: stack)
         historyLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
         historyLabel.textColor = .secondaryLabelColor
-        historyLabel.maximumNumberOfLines = 0
-        historyLabel.cell?.truncatesLastVisibleLine = false
-        historyLabel.widthAnchor.constraint(equalToConstant: 280).isActive = true
+        historyLabel.maximumNumberOfLines = 10
+        historyLabel.widthAnchor.constraint(equalToConstant: 360).isActive = true
         stack.addArrangedSubview(historyLabel)
 
-        content.addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 20),
-            stack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 20),
-            stack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -20),
-        ])
+        let clearHistory = NSButton(title: "Clear History", target: self, action: #selector(clearHistory(_:)))
+        clearHistory.bezelStyle = .rounded
+        stack.addArrangedSubview(clearHistory)
 
-        content.addSubview(stack)
-        content.frame = NSRect(x: 0, y: 0, width: 340, height: stack.fittingSize.height + 40)
-        stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 20).isActive = true
-
-        let window = NSWindow(
-            contentRect: content.frame,
-            styleMask: [.titled, .closable, .miniaturizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Matcha Settings"
-        window.contentView = content
-        window.isReleasedWhenClosed = false
-        return window
+        item.view = makeScrollView(with: stack)
     }
 
-    private func reloadStats() {
-        let defaults = UserDefaults.standard
-        todayLabel.stringValue = "Today: \(format(defaults.double(forKey: Pref.awakeToday)))"
-        totalLabel.stringValue = "All time: \(format(defaults.double(forKey: Pref.awakeTotal)))"
-        historyLabel.stringValue = formatHistory()
-    }
+    func reloadStats() {
+        let today = UserDefaults.standard.double(forKey: Pref.awakeToday)
+        let total = UserDefaults.standard.double(forKey: Pref.awakeTotal)
+        todayLabel.stringValue = "Today: \(Fmt.clockShort(today))"
+        totalLabel.stringValue = "Total: \(Fmt.clockShort(total))"
 
-    private func format(_ seconds: Double) -> String {
-        let total = Int(seconds)
-        let h = total / 3600
-        let m = (total % 3600) / 60
-        if h > 0 { return "\(h)h \(m)m" }
-        return "\(m)m"
-    }
+        let history = SessionHistory.all
+        let totalSessions = history.count
+        let avgDuration = totalSessions > 0 ? history.reduce(0) { $0 + $1.duration } / Double(totalSessions) : 0
+        statsCardLabel.stringValue = "Stats: \(totalSessions) total sessions logged · Avg: \(Fmt.clockShort(avgDuration))"
 
-    private func formatHistory() -> String {
-        let entries = SessionHistory.all.suffix(5).reversed()
-        if entries.isEmpty { return "No sessions yet" }
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .short
-        var lines: [String] = []
-        for entry in entries {
-            let dur = format(entry.duration)
-            let when = formatter.string(from: entry.startedAt)
-            lines.append("\(when) · \(dur) · \(entry.source)")
+        if history.isEmpty {
+            historyLabel.stringValue = "No sessions recorded yet"
+        } else {
+            let df = DateFormatter()
+            df.dateStyle = .short
+            df.timeStyle = .short
+            historyLabel.stringValue = history.suffix(8).reversed().map { h in
+                "\(df.string(from: h.startedAt)) · \(Fmt.clockShort(h.duration)) (\(h.source))"
+            }.joined(separator: "\n")
         }
-        return lines.joined(separator: "\n")
     }
 
     @objc private func toggled(_ sender: NSButton) {
-        guard let key = sender.identifier?.rawValue else { return }
-        UserDefaults.standard.set(sender.state == .on, forKey: key)
+        guard let id = sender.identifier?.rawValue else { return }
+        UserDefaults.standard.set(sender.state == .on, forKey: id)
         NotificationCenter.default.post(name: .matchaPrefsChanged, object: nil)
     }
 
     @objc private func appearanceChanged(_ sender: NSPopUpButton) {
-        let values = ["system", "light", "dark"]
-        UserDefaults.standard.set(values[sender.indexOfSelectedItem], forKey: Pref.appearance)
+        let modes = ["system", "light", "dark"]
+        let mode = modes[sender.indexOfSelectedItem]
+        UserDefaults.standard.set(mode, forKey: Pref.appearance)
         NotificationCenter.default.post(name: .matchaPrefsChanged, object: nil)
     }
 
     @objc private func sizeChanged(_ sender: NSPopUpButton) {
-        let values = ["small", "medium", "large"]
-        UserDefaults.standard.set(values[sender.indexOfSelectedItem], forKey: Pref.badgeSize)
+        let sizes = ["small", "medium", "large"]
+        let sz = sizes[sender.indexOfSelectedItem]
+        UserDefaults.standard.set(sz, forKey: Pref.badgeSize)
+        NotificationCenter.default.post(name: .matchaPrefsChanged, object: nil)
+    }
+
+    @objc private func postActionChanged(_ sender: NSPopUpButton) {
+        let actions = ["none", "sound", "sleep"]
+        let action = actions[sender.indexOfSelectedItem]
+        UserDefaults.standard.set(action, forKey: Pref.postSessionAction)
         NotificationCenter.default.post(name: .matchaPrefsChanged, object: nil)
     }
 
     @objc private func loginToggled(_ sender: NSButton) {
         if #available(macOS 13.0, *) {
-            if sender.state == .on {
-                try? SMAppService.mainApp.register()
-            } else {
-                try? SMAppService.mainApp.unregister()
-            }
+            do {
+                if sender.state == .on {
+                    try SMAppService.mainApp.register()
+                } else {
+                    try SMAppService.mainApp.unregister()
+                }
+            } catch {}
         }
-    }
-
-    @objc private func watchAppsChanged(_ sender: NSTextField) {
-        let names = sender.stringValue
-            .split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
-        UserDefaults.standard.set(names, forKey: Pref.watchApps)
-        NotificationCenter.default.post(name: .matchaPrefsChanged, object: nil)
     }
 
     @objc private func batteryThresholdChanged(_ sender: NSSlider) {
@@ -404,8 +457,19 @@ final class PreferencesWindowController: NSObject {
         }
     }
 
+    @objc private func clearHistory(_ sender: NSButton) {
+        SessionHistory.clear()
+        reloadStats()
+    }
+
+    @objc private func watchAppsChanged(_ sender: NSTextField) {
+        let names = sender.stringValue.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        UserDefaults.standard.set(names, forKey: Pref.watchApps)
+        NotificationCenter.default.post(name: .matchaPrefsChanged, object: nil)
+    }
+
     @objc private func saveTemplate(_ sender: NSButton) {
-        guard let contentView = window?.contentView else { return }
+        guard let contentView = sender.superview?.superview else { return }
         guard let nameField = contentView.findSubview(withIdentifier: NSUserInterfaceItemIdentifier("templateName")) as? NSTextField else { return }
         let name = nameField.stringValue.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { NSSound.beep(); return }
@@ -431,7 +495,7 @@ final class PreferencesWindowController: NSObject {
             durField.stringValue = ""
         }
         endlessField?.state = .off
-        refreshTemplateList()
+        refreshTemplateList(in: contentView)
     }
 
     @objc private func deleteTemplate(_ sender: NSButton) {
@@ -447,11 +511,12 @@ final class PreferencesWindowController: NSObject {
         let index = response.rawValue - NSApplication.ModalResponse.alertFirstButtonReturn.rawValue
         guard index >= 0 && index < templates.count else { return }
         TemplateStore.remove(named: templates[index].name)
-        refreshTemplateList()
+        if let contentView = sender.superview {
+            refreshTemplateList(in: contentView)
+        }
     }
 
-    private func refreshTemplateList() {
-        guard let contentView = window?.contentView else { return }
+    private func refreshTemplateList(in contentView: NSView) {
         guard let label = contentView.findSubview(withIdentifier: NSUserInterfaceItemIdentifier("templateList")) as? NSTextField else { return }
         let templates = TemplateStore.all
         label.stringValue = templates.isEmpty ? "No templates saved" : templates.map { t in
@@ -473,7 +538,7 @@ final class PreferencesWindowController: NSObject {
     }
 
     @objc private func saveSchedule(_ sender: NSButton) {
-        guard let contentView = window?.contentView else { return }
+        guard let contentView = sender.superview?.superview else { return }
         guard let nameField = contentView.findSubview(withIdentifier: NSUserInterfaceItemIdentifier("scheduleName")) as? NSTextField else { return }
         let name = nameField.stringValue.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { NSSound.beep(); return }
@@ -512,7 +577,7 @@ final class PreferencesWindowController: NSObject {
             }
         }
         selectedDays.removeAll()
-        refreshScheduleList()
+        refreshScheduleList(in: contentView)
     }
 
     @objc private func deleteSchedule(_ sender: NSButton) {
@@ -528,11 +593,12 @@ final class PreferencesWindowController: NSObject {
         let index = response.rawValue - NSApplication.ModalResponse.alertFirstButtonReturn.rawValue
         guard index >= 0 && index < schedules.count else { return }
         ScheduleStore.remove(named: schedules[index].name)
-        refreshScheduleList()
+        if let contentView = sender.superview {
+            refreshScheduleList(in: contentView)
+        }
     }
 
-    private func refreshScheduleList() {
-        guard let contentView = window?.contentView else { return }
+    private func refreshScheduleList(in contentView: NSView) {
         guard let label = contentView.findSubview(withIdentifier: NSUserInterfaceItemIdentifier("scheduleList")) as? NSTextField else { return }
         let dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
         let schedules = ScheduleStore.all

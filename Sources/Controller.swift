@@ -1431,6 +1431,16 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
                 UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "matcha.summary.\(UUID().uuidString)", content: content, trigger: nil))
             }
             sessionStartedAt = nil
+
+            let action = UserDefaults.standard.string(forKey: Pref.postSessionAction) ?? "none"
+            if action == "sound" {
+                NSSound.beep()
+            } else if action == "sleep" {
+                let task = Process()
+                task.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+                task.arguments = ["-e", "tell application \"System Events\" to sleep"]
+                try? task.run()
+            }
         }
         refreshAll()
     }

@@ -65,7 +65,8 @@ The app is ad-hoc signed, not notarized. The installer strips quarantine automat
 - **xbar plugin** — integration for xbar / BitBar menu bar monitoring and control.
 - **Network & Clamshell Guard** — Optional network sleep prevention (`NetworkClientActive`) and clamshell/lid-closed wake support when connected to power/display.
 - **Quick Command Palette** — Spotlight-style instant launcher (`⌃⌥⌘K`) to type durations, templates, or commands.
-- **In-app updates** — checks on launch + daily; one-click install & restart keeps your session and mode.
+- **Post-Session Actions** — Optionally play a sound or put your Mac to sleep when a session finishes.
+- **Local Analytics & Stats** — Clean usage summary card and recent session history inside Settings.
 
 ## Control it your way
 
