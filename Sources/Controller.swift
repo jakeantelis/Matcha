@@ -1441,6 +1441,15 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
                 task.arguments = ["-e", "tell application \"System Events\" to sleep"]
                 try? task.run()
             }
+
+            if let urlString = UserDefaults.standard.string(forKey: Pref.webhookURL), !urlString.isEmpty, let url = URL(string: urlString) {
+                var request = URLRequest(url: url)
+                request.httpMethod = "POST"
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                let payload: [String: Any] = ["event": "session_completed", "duration_seconds": elapsed, "source": sessionSource]
+                request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+                URLSession.shared.dataTask(with: request).resume()
+            }
         }
         refreshAll()
     }
@@ -1753,11 +1762,17 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
 
         let endingSoon = active && endDate != nil && endDate!.timeIntervalSinceNow <= 300
 
-        button.image = symbolImage(
-            active
-                ? ["cup.and.saucer.fill", "cup.and.saucer", "mug.fill", "mug"]
-                : ["leaf.fill", "leaf", "cup.and.saucer"]
-        )
+        let style = UserDefaults.standard.string(forKey: Pref.menuBarStyle) ?? "cup"
+        let names: [String]
+        switch style {
+        case "leaf":
+            names = active ? ["leaf.fill", "leaf"] : ["leaf"]
+        case "dot":
+            names = active ? ["circle.fill", "circle"] : ["circle"]
+        default:
+            names = active ? ["cup.and.saucer.fill", "cup.and.saucer", "mug.fill", "mug"] : ["leaf.fill", "leaf", "cup.and.saucer"]
+        }
+        button.image = symbolImage(names)
 
         if endingSoon {
             let blink = Int(Date().timeIntervalSince1970) % 2 == 0

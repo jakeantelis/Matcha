@@ -104,6 +104,8 @@ enum Pref {
     static let networkGuard = "networkGuard"
     static let clamshellMode = "clamshellMode"
     static let postSessionAction = "postSessionAction"
+    static let menuBarStyle = "menuBarStyle"
+    static let webhookURL = "webhookURL"
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -127,6 +129,8 @@ enum Pref {
             networkGuard: false,
             clamshellMode: false,
             postSessionAction: "none",
+            menuBarStyle: "cup",
+            webhookURL: "",
         ])
     }
 }
@@ -452,6 +456,22 @@ enum SessionHistory {
 
     static func clear() {
         UserDefaults.standard.removeObject(forKey: Pref.sessionHistory)
+    }
+
+    static func exportJSON() -> String? {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        guard let data = try? encoder.encode(all) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    static func exportCSV() -> String {
+        var csv = "started_at,duration_seconds,source\n"
+        let iso = ISO8601DateFormatter()
+        for entry in all {
+            csv += "\(iso.string(from: entry.startedAt)),\(entry.duration),\(entry.source)\n"
+        }
+        return csv
     }
 }
 

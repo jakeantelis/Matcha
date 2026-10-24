@@ -66,7 +66,9 @@ The app is ad-hoc signed, not notarized. The installer strips quarantine automat
 - **Network & Clamshell Guard** — Optional network sleep prevention (`NetworkClientActive`) and clamshell/lid-closed wake support when connected to power/display.
 - **Quick Command Palette** — Spotlight-style instant launcher (`⌃⌥⌘K`) to type durations, templates, or commands.
 - **Post-Session Actions** — Optionally play a sound or put your Mac to sleep when a session finishes.
-- **Local Analytics & Stats** — Clean usage summary card and recent session history inside Settings.
+- **Menu Bar Icon Customization** — Choose between the matcha cup, a minimal leaf, or a status dot icon.
+- **Custom Agent Manager** — Easily add custom agent process names via Settings without manual file edits.
+- **Export & Webhooks** — Export session history to JSON/CSV and dispatch webhooks on session completion.
 
 ## Control it your way
 

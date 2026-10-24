@@ -22,7 +22,7 @@ final class PreferencesWindowController: NSObject {
 
     private func makeWindow() -> NSWindow {
         let panel = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 440, height: 480),
+            contentRect: NSRect(x: 0, y: 0, width: 440, height: 500),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -30,7 +30,7 @@ final class PreferencesWindowController: NSObject {
         panel.title = "Matcha Settings"
         panel.titlebarAppearsTransparent = false
 
-        let tabView = NSTabView(frame: NSRect(x: 0, y: 0, width: 440, height: 480))
+        let tabView = NSTabView(frame: NSRect(x: 0, y: 0, width: 440, height: 500))
         tabView.translatesAutoresizingMaskIntoConstraints = false
 
         let t1 = NSTabViewItem(identifier: "general")
@@ -47,10 +47,10 @@ final class PreferencesWindowController: NSObject {
         tabView.addTabViewItem(t3)
         tabView.addTabViewItem(t4)
 
-        populateGeneralTab(tabView.tabViewItems[0])
-        populatePowerTab(tabView.tabViewItems[1])
-        populateAutomationTab(tabView.tabViewItems[2])
-        populateAnalyticsTab(tabView.tabViewItems[3])
+        populateGeneralTab(t1)
+        populatePowerTab(t2)
+        populateAutomationTab(t3)
+        populateAnalyticsTab(t4)
 
         panel.contentView?.addSubview(tabView)
         NSLayoutConstraint.activate([
@@ -107,6 +107,15 @@ final class PreferencesWindowController: NSObject {
         checkbox("Translucent Indicator", Pref.translucentIndicator, in: stack)
         checkbox("Animations", Pref.animations, in: stack)
         checkbox("Show Tips", Pref.showTips, in: stack)
+
+        header("Menu Bar Icon Style", in: stack)
+        let iconStyle = NSPopUpButton(frame: .zero, pullsDown: false)
+        iconStyle.addItems(withTitles: ["Matcha Cup", "Minimal Leaf", "Status Dot"])
+        let currentStyle = UserDefaults.standard.string(forKey: Pref.menuBarStyle) ?? "cup"
+        iconStyle.selectItem(at: ["cup", "leaf", "dot"].firstIndex(of: currentStyle) ?? 0)
+        iconStyle.target = self
+        iconStyle.action = #selector(iconStyleChanged(_:))
+        stack.addArrangedSubview(iconStyle)
 
         header("Appearance", in: stack)
         let appearance = NSPopUpButton(frame: .zero, pullsDown: false)
@@ -210,6 +219,16 @@ final class PreferencesWindowController: NSObject {
         postAction.action = #selector(postActionChanged(_:))
         stack.addArrangedSubview(postAction)
 
+        header("Webhook on Finish", in: stack)
+        let webhookField = NSTextField()
+        webhookField.placeholderString = "https://your-webhook-url.com"
+        webhookField.stringValue = UserDefaults.standard.string(forKey: Pref.webhookURL) ?? ""
+        webhookField.translatesAutoresizingMaskIntoConstraints = false
+        webhookField.widthAnchor.constraint(equalToConstant: 360).isActive = true
+        webhookField.target = self
+        webhookField.action = #selector(webhookChanged(_:))
+        stack.addArrangedSubview(webhookField)
+
         item.view = makeScrollView(with: stack)
     }
 
@@ -219,6 +238,30 @@ final class PreferencesWindowController: NSObject {
         header("Coding Agents", in: stack)
         checkbox("Auto-Keep Awake for Code", Pref.autoTriggers, in: stack)
         checkbox("Auto-Start for Coding Agents", Pref.autoStartAgents, in: stack)
+
+        let agentRow = NSStackView()
+        agentRow.orientation = .horizontal
+        agentRow.alignment = .centerY
+        agentRow.spacing = 8
+
+        let agentField = NSTextField()
+        agentField.placeholderString = "Add custom agent process (e.g. cursor)"
+        agentField.translatesAutoresizingMaskIntoConstraints = false
+        agentField.widthAnchor.constraint(equalToConstant: 280).isActive = true
+        agentField.identifier = NSUserInterfaceItemIdentifier("customAgentField")
+        agentRow.addArrangedSubview(agentField)
+
+        let addAgentBtn = NSButton(title: "Add", target: self, action: #selector(addCustomAgent(_:)))
+        addAgentBtn.bezelStyle = .rounded
+        agentRow.addArrangedSubview(addAgentBtn)
+        stack.addArrangedSubview(agentRow)
+
+        let customList = (UserDefaults.standard.stringArray(forKey: Pref.customAgents) ?? []).joined(separator: ", ")
+        let agentListLabel = NSTextField(labelWithString: customList.isEmpty ? "Custom agents: none" : "Custom: \(customList)")
+        agentListLabel.font = NSFont.systemFont(ofSize: 11)
+        agentListLabel.textColor = .secondaryLabelColor
+        agentListLabel.identifier = NSUserInterfaceItemIdentifier("customAgentList")
+        stack.addArrangedSubview(agentListLabel)
 
         header("Watch Apps", in: stack)
         let watchLabel = NSTextField(labelWithString: "Keep awake while these apps run (comma separated):")
@@ -373,9 +416,23 @@ final class PreferencesWindowController: NSObject {
         historyLabel.widthAnchor.constraint(equalToConstant: 360).isActive = true
         stack.addArrangedSubview(historyLabel)
 
+        let exportRow = NSStackView()
+        exportRow.orientation = .horizontal
+        exportRow.spacing = 8
+
+        let exportJSONBtn = NSButton(title: "Export JSON", target: self, action: #selector(exportJSON(_:)))
+        exportJSONBtn.bezelStyle = .rounded
+        exportRow.addArrangedSubview(exportJSONBtn)
+
+        let exportCSVBtn = NSButton(title: "Export CSV", target: self, action: #selector(exportCSV(_:)))
+        exportCSVBtn.bezelStyle = .rounded
+        exportRow.addArrangedSubview(exportCSVBtn)
+
         let clearHistory = NSButton(title: "Clear History", target: self, action: #selector(clearHistory(_:)))
         clearHistory.bezelStyle = .rounded
-        stack.addArrangedSubview(clearHistory)
+        exportRow.addArrangedSubview(clearHistory)
+
+        stack.addArrangedSubview(exportRow)
 
         item.view = makeScrollView(with: stack)
     }
@@ -423,11 +480,55 @@ final class PreferencesWindowController: NSObject {
         NotificationCenter.default.post(name: .matchaPrefsChanged, object: nil)
     }
 
+    @objc private func iconStyleChanged(_ sender: NSPopUpButton) {
+        let styles = ["cup", "leaf", "dot"]
+        let style = styles[sender.indexOfSelectedItem]
+        UserDefaults.standard.set(style, forKey: Pref.menuBarStyle)
+        NotificationCenter.default.post(name: .matchaPrefsChanged, object: nil)
+    }
+
     @objc private func postActionChanged(_ sender: NSPopUpButton) {
         let actions = ["none", "sound", "sleep"]
         let action = actions[sender.indexOfSelectedItem]
         UserDefaults.standard.set(action, forKey: Pref.postSessionAction)
         NotificationCenter.default.post(name: .matchaPrefsChanged, object: nil)
+    }
+
+    @objc private func webhookChanged(_ sender: NSTextField) {
+        UserDefaults.standard.set(sender.stringValue.trimmingCharacters(in: .whitespaces), forKey: Pref.webhookURL)
+    }
+
+    @objc private func addCustomAgent(_ sender: NSButton) {
+        guard let contentView = sender.superview else { return }
+        guard let field = contentView.findSubview(withIdentifier: NSUserInterfaceItemIdentifier("customAgentField")) as? NSTextField else { return }
+        let text = field.stringValue
+        if AgentRegistry.addCustom(text) {
+            field.stringValue = ""
+            if let label = contentView.findSubview(withIdentifier: NSUserInterfaceItemIdentifier("customAgentList")) as? NSTextField {
+                let customList = (UserDefaults.standard.stringArray(forKey: Pref.customAgents) ?? []).joined(separator: ", ")
+                label.stringValue = customList.isEmpty ? "Custom agents: none" : "Custom: \(customList)"
+            }
+        } else {
+            NSSound.beep()
+        }
+    }
+
+    @objc private func exportJSON(_ sender: NSButton) {
+        guard let json = SessionHistory.exportJSON() else { return }
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "matcha-history.json"
+        if panel.runModal() == .OK, let url = panel.url {
+            try? json.write(to: url, atomically: true, encoding: .utf8)
+        }
+    }
+
+    @objc private func exportCSV(_ sender: NSButton) {
+        let csv = SessionHistory.exportCSV()
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "matcha-history.csv"
+        if panel.runModal() == .OK, let url = panel.url {
+            try? csv.write(to: url, atomically: true, encoding: .utf8)
+        }
     }
 
     @objc private func loginToggled(_ sender: NSButton) {
