@@ -70,7 +70,7 @@ The app is ad-hoc signed, not notarized. The installer strips quarantine automat
 
 Whichever you choose — visual floater, menu bar, hotkeys, or pure CLI — Matcha has you covered.
 
-## Why not Amphetamine or Caffeinate?
+## How it compares
 
 | | **Matcha** | Amphetamine | Caffeinate |
 |---|:---:|:---:|:---:|
