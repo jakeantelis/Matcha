@@ -43,12 +43,15 @@ final class PanelView: NSView {
 
     required init?(coder: NSCoder) { fatalError() }
 
+    override var acceptsFirstResponder: Bool { true }
+
     func apply(state: MatchaState) {
         let busy = state.triggerBusy || state.agentRunning
         let activeBusy = state.active && busy
         tint.setActive(state.active)
         ring.active = state.active
         ring.accent = Matcha.green
+        ring.setAccessibilityLabel(state.active ? "Matcha active, tap to stop" : "Matcha idle, tap to start")
 
         var timed = false
         if state.active, let end = state.endDate, let total = state.duration, total > 0 {
@@ -241,6 +244,17 @@ final class PanelView: NSView {
         window?.performClose(sender)
     }
 
+    override func keyDown(with event: NSEvent) {
+        switch event.keyCode {
+        case 36, 76:
+            onPreset?(nil)
+        case 49:
+            onToggle?()
+        default:
+            super.keyDown(with: event)
+        }
+    }
+
     @objc private func chipClicked(_ sender: NSButton) {
         if sender.tag == 9999 {
             durationInput.isHidden = false
@@ -288,6 +302,8 @@ final class PanelView: NSView {
         gear.target = self
         gear.action = #selector(gearClicked)
         gear.toolTip = "Settings"
+        gear.setAccessibilityRole(.button)
+        gear.setAccessibilityLabel("Settings")
         gear.translatesAutoresizingMaskIntoConstraints = false
         gear.widthAnchor.constraint(equalToConstant: 20).isActive = true
         gear.heightAnchor.constraint(equalToConstant: 20).isActive = true
@@ -312,17 +328,25 @@ final class PanelView: NSView {
         statusLabel.font = NSFont.systemFont(ofSize: 16, weight: .semibold)
         statusLabel.alignment = .center
         statusLabel.widthAnchor.constraint(equalToConstant: inner).isActive = true
+        statusLabel.setAccessibilityRole(.staticText)
+        statusLabel.setAccessibilityLabel("Status")
 
         detailLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
         detailLabel.textColor = .secondaryLabelColor
         detailLabel.alignment = .center
         detailLabel.lineBreakMode = .byTruncatingTail
         detailLabel.widthAnchor.constraint(equalToConstant: inner).isActive = true
+        detailLabel.setAccessibilityRole(.staticText)
+        detailLabel.setAccessibilityLabel("Time remaining")
 
         let chipSpecs: [(String, Int)] = [
             ("2h", 7200), ("4h", 14400), ("\u{221E}", 0), ("Custom", 9999),
         ]
         presetChips = chipSpecs.map { chip($0.0, tag: $0.1) }
+        presetChips[0].setAccessibilityLabel("Start 2 hour session")
+        presetChips[1].setAccessibilityLabel("Start 4 hour session")
+        presetChips[2].setAccessibilityLabel("Start until stopped")
+        presetChips[3].setAccessibilityLabel("Custom duration")
         let chips = NSStackView(views: presetChips)
         chips.orientation = .horizontal
         chips.distribution = .fillEqually

@@ -37,6 +37,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private var watchAutoActive = false
     private var agentAutoActive = false
     private var sessionAutoStarted = false
+    private var sessionSource = "manual"
     private var lastWatchStop: Date?
 
     private func startAgentDetection() {
@@ -137,7 +138,13 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
                     if UserDefaults.standard.bool(forKey: Pref.autoStartAgents) {
                         if let last = self.lastWatchStop, Date().timeIntervalSince(last) < 300 { return }
                         self.agentAutoActive = true
+                        self.sessionSource = "agent:\(order.joined(separator: ", "))"
                         self.start(duration: nil, auto: true)
+                        let content = UNMutableNotificationContent()
+                        content.title = "Matcha started"
+                        content.body = "\(order.joined(separator: ", ")) detected — keeping your Mac awake"
+                        content.sound = .default
+                        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "matcha.autostart.\(UUID().uuidString)", content: content, trigger: nil))
                         return
                     }
                     let key = "lastAgentPrompt"
@@ -182,7 +189,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Pref.registerDefaults()
-        NSApp.setActivationPolicy(.regular)
+        applyDockPolicy()
         buildMainMenu()
 
         let panel = PanelView()
@@ -235,6 +242,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         NotificationCenter.default.addObserver(forName: .matchaPrefsChanged, object: nil, queue: .main) { [weak self] _ in
             guard let self else { return }
             self.applyPreferences()
+            self.applyDockPolicy()
             if let badge = self.badge {
                 badge.resize(to: FloatingBadge.size(for: UserDefaults.standard.string(forKey: Pref.badgeSize) ?? "medium"))
                 self.clampBadgeToScreen()
@@ -543,6 +551,9 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     @objc func showWindow() {
         if window == nil { createWindow() }
         window?.makeKeyAndOrderFront(nil)
+        if let panel = windowPanel {
+            window?.makeFirstResponder(panel)
+        }
         NSApp.activate(ignoringOtherApps: true)
     }
 
@@ -557,6 +568,11 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             statusItem = nil
         }
         applyAppearance()
+    }
+
+    private func applyDockPolicy() {
+        let showInDock = UserDefaults.standard.bool(forKey: Pref.showInDock)
+        NSApp.setActivationPolicy(showInDock ? .regular : .accessory)
     }
 
     private func createStatusItem() {
@@ -583,6 +599,9 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             popover.performClose(nil)
         } else if let button = statusItem?.button {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            if let panel = popoverPanel {
+                popover.contentViewController?.view.window?.makeFirstResponder(panel)
+            }
         }
     }
 
@@ -688,6 +707,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         // Menu Bar & Floater
         menu.addItem(toggleItem("Show in Menu Bar", Pref.showMenuBarIcon, #selector(toggleMenuBarIcon(_:))))
         menu.addItem(toggleItem("Show Time in Menu Bar", Pref.menuBarCountdown, #selector(toggleMenuBarCountdown(_:))))
+        menu.addItem(toggleItem("Show in Dock", Pref.showInDock, #selector(toggleShowInDock(_:))))
         menu.addItem(toggleItem("Show Floating Indicator", Pref.showFloatingIndicator, #selector(toggleFloatingIndicator(_:))))
         menu.addItem(toggleItem("Translucent Indicator", Pref.translucentIndicator, #selector(toggleTranslucent(_:))))
         menu.addItem(toggleItem("Animations", Pref.animations, #selector(toggleAnimations(_:))))
@@ -1059,6 +1079,12 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         updateStatusItem()
     }
 
+    @objc private func toggleShowInDock(_ sender: NSMenuItem) {
+        let value = !UserDefaults.standard.bool(forKey: Pref.showInDock)
+        UserDefaults.standard.set(value, forKey: Pref.showInDock)
+        applyDockPolicy()
+    }
+
     @objc private func toggleFloatingIndicator(_ sender: NSMenuItem) {
         let value = !UserDefaults.standard.bool(forKey: Pref.showFloatingIndicator)
         UserDefaults.standard.set(value, forKey: Pref.showFloatingIndicator)
@@ -1161,6 +1187,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             sessionStartedAt = Date()
         }
         sessionAutoStarted = false
+        sessionSource = "manual"
         duration = seconds
         endDate = end
         warnedEnding = false
@@ -1228,6 +1255,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         if running, !active {
             if let last = lastWatchStop, Date().timeIntervalSince(last) < 300 { return }
             watchAutoActive = true
+            sessionSource = "watch:\(names.joined(separator: ", "))"
             start(duration: nil, auto: true)
         } else if !running, watchAutoActive, sessionAutoStarted {
             watchAutoActive = false
@@ -1246,6 +1274,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             sessionStartedAt = Date()
         }
         sessionAutoStarted = auto
+        if !auto { sessionSource = "manual" }
         duration = seconds
         endDate = seconds.map { Date().addingTimeInterval($0) }
         warnedEnding = false
@@ -1271,7 +1300,9 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         clearPersistedSession()
         if let started = sessionStartedAt {
             addAwake(Date().timeIntervalSince(started))
-            let mins = Int(Date().timeIntervalSince(started) / 60)
+            let elapsed = Date().timeIntervalSince(started)
+            let mins = Int(elapsed / 60)
+            SessionHistory.add(startedAt: started, duration: elapsed, source: sessionSource)
             if mins >= 5 {
                 let content = UNMutableNotificationContent()
                 content.title = "Session complete"
@@ -1375,6 +1406,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             return
         }
         active = true
+        sessionSource = "restored"
         startTicker()
         startBatteryGuard()
     }
@@ -1542,7 +1574,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         button.contentTintColor = active ? Matcha.green : NSColor.tertiaryLabelColor
         let showTime = UserDefaults.standard.bool(forKey: Pref.menuBarCountdown)
         if active, showTime {
-            button.title = endDate.map { " " + Fmt.clock($0.timeIntervalSinceNow) } ?? " \u{221E}"
+            button.title = endDate.map { " " + Fmt.clockShort($0.timeIntervalSinceNow) } ?? " \u{221E}"
             button.toolTip = active && endDate != nil ? "Matcha — \(Fmt.clock(endDate!.timeIntervalSinceNow)) left" : (active ? "Matcha — Until you stop" : "Matcha — Ready")
         } else {
             button.title = ""

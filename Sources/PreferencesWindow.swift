@@ -7,6 +7,7 @@ final class PreferencesWindowController: NSObject {
     private var window: NSWindow?
     private let todayLabel = NSTextField(labelWithString: "")
     private let totalLabel = NSTextField(labelWithString: "")
+    private let historyLabel = NSTextField(labelWithString: "")
 
     func show() {
         if window == nil {
@@ -53,6 +54,7 @@ final class PreferencesWindowController: NSObject {
         header("Menu Bar & Floater")
         checkbox("Show in Menu Bar", Pref.showMenuBarIcon)
         checkbox("Show Time in Menu Bar", Pref.menuBarCountdown)
+        checkbox("Show in Dock", Pref.showInDock)
         checkbox("Show Floating Indicator", Pref.showFloatingIndicator)
         checkbox("Translucent Indicator", Pref.translucentIndicator)
         checkbox("Animations", Pref.animations)
@@ -103,6 +105,14 @@ final class PreferencesWindowController: NSObject {
         stack.addArrangedSubview(todayLabel)
         stack.addArrangedSubview(totalLabel)
 
+        header("Recent Sessions")
+        historyLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+        historyLabel.textColor = .secondaryLabelColor
+        historyLabel.maximumNumberOfLines = 0
+        historyLabel.cell?.truncatesLastVisibleLine = false
+        historyLabel.widthAnchor.constraint(equalToConstant: 280).isActive = true
+        stack.addArrangedSubview(historyLabel)
+
         content.addSubview(stack)
         NSLayoutConstraint.activate([
             stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 20),
@@ -130,6 +140,7 @@ final class PreferencesWindowController: NSObject {
         let defaults = UserDefaults.standard
         todayLabel.stringValue = "Today: \(format(defaults.double(forKey: Pref.awakeToday)))"
         totalLabel.stringValue = "All time: \(format(defaults.double(forKey: Pref.awakeTotal)))"
+        historyLabel.stringValue = formatHistory()
     }
 
     private func format(_ seconds: Double) -> String {
@@ -138,6 +149,21 @@ final class PreferencesWindowController: NSObject {
         let m = (total % 3600) / 60
         if h > 0 { return "\(h)h \(m)m" }
         return "\(m)m"
+    }
+
+    private func formatHistory() -> String {
+        let entries = SessionHistory.all.suffix(5).reversed()
+        if entries.isEmpty { return "No sessions yet" }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        var lines: [String] = []
+        for entry in entries {
+            let dur = format(entry.duration)
+            let when = formatter.string(from: entry.startedAt)
+            lines.append("\(when) · \(dur) · \(entry.source)")
+        }
+        return lines.joined(separator: "\n")
     }
 
     @objc private func toggled(_ sender: NSButton) {

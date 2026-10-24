@@ -35,5 +35,21 @@ check("label for builtin", AgentRegistry.label(for: "opencode"), "opencode")
 check("label for unknown falls back", AgentRegistry.label(for: "my-agent"), "my-agent")
 check("builtin count >= 40", AgentRegistry.builtIn.count >= 40, true)
 
+// --- Fmt.clockShort ---
+check("clockShort 2.5h", Fmt.clockShort(9000), "2h30m")
+check("clockShort 9m", Fmt.clockShort(540), "9:00")
+check("clockShort 0", Fmt.clockShort(0), "0:00")
+check("clockShort 1h", Fmt.clockShort(3600), "1h00m")
+
+// --- SessionHistory ---
+SessionHistory.clear()
+check("history empty after clear", SessionHistory.all.count, 0)
+SessionHistory.add(startedAt: Date(), duration: 1800, source: "manual")
+check("history has 1 entry", SessionHistory.all.count, 1)
+check("history duration", SessionHistory.all[0].duration, 1800)
+check("history source", SessionHistory.all[0].source, "manual")
+SessionHistory.clear()
+check("history empty after clear 2", SessionHistory.all.count, 0)
+
 print(failures == 0 ? "ALL TESTS PASSED" : "\(failures) TEST(S) FAILED")
 exit(failures == 0 ? 0 : 1)

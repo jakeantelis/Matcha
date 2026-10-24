@@ -39,6 +39,9 @@ final class FloatingBadge: NSPanel {
         badgeView.frame = NSRect(x: 0, y: 0, width: side, height: side)
         badgeView.autoresizingMask = [.width, .height]
         badgeView.toolTip = "Click for timer and settings \u{00B7} Right-click for quick actions \u{00B7} Drag to move"
+        badgeView.setAccessibilityRole(.button)
+        badgeView.setAccessibilityLabel("Matcha floating indicator")
+        badgeView.setAccessibilityHelp("Click for timer and settings. Right-click for quick actions. Drag to move.")
         badgeView.onClick = { [weak self] in self?.onClick?() }
         badgeView.onRightClick = { [weak self] in self?.onRightClick?() }
         badgeView.onMoved = { [weak self] origin in self?.setFrameOrigin(origin) }
@@ -273,10 +276,12 @@ final class BadgeView: NSView {
             timed = true
             text = Fmt.clock(end.timeIntervalSinceNow)
             progress = CGFloat(max(0, min(1, end.timeIntervalSinceNow / total)))
+            setAccessibilityLabel("Matcha awake, \(text) remaining")
         } else {
             timed = false
             text = ""
             progress = state.active ? 1 : 0
+            setAccessibilityLabel(state.active ? "Matcha awake, until stopped" : "Matcha idle")
         }
         needsDisplay = true
     }

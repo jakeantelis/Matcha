@@ -84,6 +84,8 @@ enum Pref {
     static let awakeTotal = "awakeTotal"
     static let awakeToday = "awakeToday"
     static let awakeTodayDate = "awakeTodayDate"
+    static let showInDock = "showInDock"
+    static let sessionHistory = "sessionHistory"
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -100,6 +102,7 @@ enum Pref {
             animations: true,
             firstRunHintShown: false,
             autoStartAgents: false,
+            showInDock: true,
         ])
     }
 }
@@ -231,6 +234,17 @@ enum Fmt {
     static func remainingShort(_ state: MatchaState) -> String {
         guard let end = state.endDate else { return "On" }
         return clock(end.timeIntervalSinceNow)
+    }
+
+    static func clockShort(_ interval: TimeInterval) -> String {
+        let seconds = Int(max(0, interval.rounded()))
+        let hours = seconds / 3600
+        let minutes = (seconds % 3600) / 60
+        let secs = seconds % 60
+        if hours > 0 {
+            return "\(hours)h\(String(format: "%02d", minutes))m"
+        }
+        return String(format: "%d:%02d", minutes, secs)
     }
 }
 
@@ -382,5 +396,37 @@ enum AgentRegistry {
         let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_."))
         guard trimmed.unicodeScalars.allSatisfy({ allowed.contains($0) }) else { return "" }
         return trimmed.lowercased()
+    }
+}
+
+enum SessionHistory {
+    struct Entry: Codable {
+        let startedAt: Date
+        let duration: TimeInterval
+        let source: String
+    }
+
+    static let maxEntries = 20
+
+    static func add(startedAt: Date, duration: TimeInterval, source: String) {
+        var entries = all
+        entries.append(Entry(startedAt: startedAt, duration: duration, source: source))
+        if entries.count > maxEntries {
+            entries.removeFirst(entries.count - maxEntries)
+        }
+        if let data = try? JSONEncoder().encode(entries) {
+            UserDefaults.standard.set(data, forKey: Pref.sessionHistory)
+        }
+    }
+
+    static var all: [Entry] {
+        guard let data = UserDefaults.standard.data(forKey: Pref.sessionHistory),
+              let entries = try? JSONDecoder().decode([Entry].self, from: data)
+        else { return [] }
+        return entries
+    }
+
+    static func clear() {
+        UserDefaults.standard.removeObject(forKey: Pref.sessionHistory)
     }
 }
