@@ -1,6 +1,6 @@
 # Matcha
 
-**Keep your Mac awake for builds, exports, and AI coding agents — with a cup of calm.**
+**Keep your Mac awake for builds, exports, and AI coding agents.**
 
 [![Release](https://img.shields.io/github/v/release/jakeantelis/Matcha)](https://github.com/jakeantelis/Matcha/releases)
 [![License](https://img.shields.io/github/license/jakeantelis/Matcha)](LICENSE)
@@ -25,6 +25,11 @@ curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/insta
 Installs to `/Applications`, launches, and configures your coding agents. Rerun to update; skip agent setup with `| sh -s -- --no-agents`.
 
 *Requires macOS 11+ (universal — Apple Silicon & Intel). Allow notifications for the ending warning and agent prompts.*
+
+> **Signing:** Matcha is ad-hoc signed and **not notarized by Apple**. The installer
+> strips quarantine automatically, so the one-liner just works. Manual downloads
+> need right-click → **Open** (or System Settings → Privacy & Security → Open Anyway)
+> the first time. Notarization will come once a paid Apple Developer ID is available.
 
 <details>
 <summary>Manual install</summary>
