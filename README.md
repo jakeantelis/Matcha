@@ -20,36 +20,19 @@ Matcha is a tiny macOS menu-bar utility that keeps your display on and lock scre
 
 ## Install
 
-One command — done:
+**Recommended: one command.** Open **Terminal** (*Applications → Utilities → Terminal*), paste this, and press **Return**:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/install.sh | sh
 ```
 
-Installs to `/Applications`, launches, and configures your coding agents. Rerun to update; skip agent setup with `| sh -s -- --no-agents`.
+The installer downloads the latest release, verifies its SHA-256 checksum, installs Matcha to `/Applications`, launches it, and configures supported coding agents. Rerun it anytime to update; skip agent setup with `| sh -s -- --no-agents`.
+
+> **Signing status:** Matcha is currently ad-hoc signed and not yet Apple-notarized. The installer above is the recommended first-launch path while Developer ID signing and notarization are being completed.
 
 **Mac App Store:** Exploring native Mac App Store distribution for the future — watch the [releases page](https://github.com/jakeantelis/Matcha/releases) for announcements.
 
-*Requires macOS 11+ (universal — Apple Silicon & Intel). Allow notifications for the ending warning and agent prompts.*
-
-> **Signing:** Matcha is ad-hoc signed and **not notarized by Apple**. The installer
-> strips quarantine automatically, so the one-liner just works. Manual downloads
-> need right-click → **Open** (or System Settings → Privacy & Security → Open Anyway)
-> the first time. Notarization will come once a paid Apple Developer ID is available.
-
-<details>
-<summary>Manual install</summary>
-
-```sh
-curl -fL https://github.com/jakeantelis/Matcha/releases/latest/download/Matcha.zip -o /tmp/Matcha.zip
-unzip -qo /tmp/Matcha.zip -d /Applications
-xattr -dr com.apple.quarantine /Applications/Matcha.app 2>/dev/null || true
-open /Applications/Matcha.app
-```
-
-The app is ad-hoc signed, not notarized. The installer strips quarantine automatically; for manual downloads use right-click → Open.
-
-</details>
+*Requires macOS 11+ (universal — Apple Silicon & Intel). Allow notifications for session ending warnings and agent prompts.*
 
 ## Features
 
