@@ -22,15 +22,15 @@ final class PreferencesWindowController: NSObject {
 
     private func makeWindow() -> NSWindow {
         let panel = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 440, height: 500),
-            styleMask: [.titled, .closable, .fullSizeContentView],
+            contentRect: NSRect(x: 0, y: 0, width: 460, height: 520),
+            styleMask: [.titled, .closable, .fullSizeContentView, .utilityWindow],
             backing: .buffered,
             defer: false
         )
         panel.title = "Matcha Settings"
         panel.titlebarAppearsTransparent = false
 
-        let tabView = NSTabView(frame: NSRect(x: 0, y: 0, width: 440, height: 500))
+        let tabView = NSTabView(frame: NSRect(x: 0, y: 0, width: 460, height: 520))
         tabView.translatesAutoresizingMaskIntoConstraints = false
 
         let t1 = NSTabViewItem(identifier: "general")
@@ -75,18 +75,18 @@ final class PreferencesWindowController: NSObject {
         let stack = NSStackView()
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 8
-        stack.edgeInsets = NSEdgeInsets(top: 20, left: 24, bottom: 20, right: 24)
+        stack.spacing = 10
+        stack.edgeInsets = NSEdgeInsets(top: 24, left: 28, bottom: 24, right: 28)
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }
 
     private func header(_ text: String, in stack: NSStackView) {
-        let label = NSTextField(labelWithString: text)
-        label.font = NSFont.systemFont(ofSize: 11, weight: .semibold)
-        label.textColor = .secondaryLabelColor
+        let label = NSTextField(labelWithString: text.uppercased())
+        label.font = NSFont.systemFont(ofSize: 10, weight: .bold)
+        label.textColor = .tertiaryLabelColor
         stack.addArrangedSubview(label)
-        stack.setCustomSpacing(2, after: label)
+        stack.setCustomSpacing(4, after: label)
     }
 
     private func checkbox(_ title: String, _ key: String, in stack: NSStackView) {
@@ -135,7 +135,7 @@ final class PreferencesWindowController: NSObject {
         stack.addArrangedSubview(size)
 
         if #available(macOS 13.0, *) {
-            header("System", in: stack)
+            header("System Integration", in: stack)
             let login = NSButton(checkboxWithTitle: "Launch at Login", target: self, action: #selector(loginToggled(_:)))
             login.state = SMAppService.mainApp.status == .enabled ? .on : .off
             stack.addArrangedSubview(login)
@@ -224,7 +224,7 @@ final class PreferencesWindowController: NSObject {
         webhookField.placeholderString = "https://your-webhook-url.com"
         webhookField.stringValue = UserDefaults.standard.string(forKey: Pref.webhookURL) ?? ""
         webhookField.translatesAutoresizingMaskIntoConstraints = false
-        webhookField.widthAnchor.constraint(equalToConstant: 360).isActive = true
+        webhookField.widthAnchor.constraint(equalToConstant: 380).isActive = true
         webhookField.target = self
         webhookField.action = #selector(webhookChanged(_:))
         stack.addArrangedSubview(webhookField)
@@ -247,7 +247,7 @@ final class PreferencesWindowController: NSObject {
         let agentField = NSTextField()
         agentField.placeholderString = "Add custom agent process (e.g. cursor)"
         agentField.translatesAutoresizingMaskIntoConstraints = false
-        agentField.widthAnchor.constraint(equalToConstant: 280).isActive = true
+        agentField.widthAnchor.constraint(equalToConstant: 300).isActive = true
         agentField.identifier = NSUserInterfaceItemIdentifier("customAgentField")
         agentRow.addArrangedSubview(agentField)
 
@@ -273,7 +273,7 @@ final class PreferencesWindowController: NSObject {
         watchField.placeholderString = "e.g. Logic Pro, Final Cut Pro, Blender"
         watchField.stringValue = (UserDefaults.standard.stringArray(forKey: Pref.watchApps) ?? []).joined(separator: ", ")
         watchField.translatesAutoresizingMaskIntoConstraints = false
-        watchField.widthAnchor.constraint(equalToConstant: 360).isActive = true
+        watchField.widthAnchor.constraint(equalToConstant: 380).isActive = true
         watchField.target = self
         watchField.action = #selector(watchAppsChanged(_:))
         stack.addArrangedSubview(watchField)
@@ -283,7 +283,7 @@ final class PreferencesWindowController: NSObject {
         let templateField = NSTextField()
         templateField.placeholderString = "Template name (e.g. Morning Build)"
         templateField.translatesAutoresizingMaskIntoConstraints = false
-        templateField.widthAnchor.constraint(equalToConstant: 360).isActive = true
+        templateField.widthAnchor.constraint(equalToConstant: 380).isActive = true
         templateField.identifier = NSUserInterfaceItemIdentifier("templateName")
         stack.addArrangedSubview(templateField)
 
@@ -296,7 +296,7 @@ final class PreferencesWindowController: NSObject {
         templateDuration.placeholderString = "e.g. 4h, 90m"
         templateDuration.translatesAutoresizingMaskIntoConstraints = false
         templateDuration.identifier = NSUserInterfaceItemIdentifier("templateDuration")
-        templateDuration.widthAnchor.constraint(equalToConstant: 160).isActive = true
+        templateDuration.widthAnchor.constraint(equalToConstant: 170).isActive = true
         durationRow.addArrangedSubview(templateDuration)
 
         let endlessCheck = NSButton(checkboxWithTitle: "Endless", target: self, action: #selector(toggled(_:)))
@@ -315,7 +315,7 @@ final class PreferencesWindowController: NSObject {
         templateLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
         templateLabel.textColor = .secondaryLabelColor
         templateLabel.maximumNumberOfLines = 0
-        templateLabel.widthAnchor.constraint(equalToConstant: 360).isActive = true
+        templateLabel.widthAnchor.constraint(equalToConstant: 380).isActive = true
         templateLabel.identifier = NSUserInterfaceItemIdentifier("templateList")
         stack.addArrangedSubview(templateLabel)
 
@@ -327,7 +327,7 @@ final class PreferencesWindowController: NSObject {
         let schedNameField = NSTextField()
         schedNameField.placeholderString = "Schedule name (e.g. Morning Build)"
         schedNameField.translatesAutoresizingMaskIntoConstraints = false
-        schedNameField.widthAnchor.constraint(equalToConstant: 360).isActive = true
+        schedNameField.widthAnchor.constraint(equalToConstant: 380).isActive = true
         schedNameField.identifier = NSUserInterfaceItemIdentifier("scheduleName")
         stack.addArrangedSubview(schedNameField)
 
@@ -384,7 +384,7 @@ final class PreferencesWindowController: NSObject {
         scheduleLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
         scheduleLabel.textColor = .secondaryLabelColor
         scheduleLabel.maximumNumberOfLines = 0
-        scheduleLabel.widthAnchor.constraint(equalToConstant: 360).isActive = true
+        scheduleLabel.widthAnchor.constraint(equalToConstant: 380).isActive = true
         scheduleLabel.identifier = NSUserInterfaceItemIdentifier("scheduleList")
         stack.addArrangedSubview(scheduleLabel)
 
@@ -413,7 +413,7 @@ final class PreferencesWindowController: NSObject {
         historyLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
         historyLabel.textColor = .secondaryLabelColor
         historyLabel.maximumNumberOfLines = 10
-        historyLabel.widthAnchor.constraint(equalToConstant: 360).isActive = true
+        historyLabel.widthAnchor.constraint(equalToConstant: 380).isActive = true
         stack.addArrangedSubview(historyLabel)
 
         let exportRow = NSStackView()
