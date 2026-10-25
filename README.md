@@ -2,6 +2,8 @@
 
 **Keep your Mac awake for builds, exports, and AI coding agents.**
 
+> **100% Free & Open Source (MIT)** · No accounts, no subscriptions, no tracking, and zero bloat. Built natively in Swift for macOS.
+
 [![Release](https://img.shields.io/github/v/release/jakeantelis/Matcha)](https://github.com/jakeantelis/Matcha/releases)
 [![License](https://img.shields.io/github/license/jakeantelis/Matcha)](LICENSE)
 [![Platform](https://img.shields.io/badge/macOS-11%2B-2f6f4f)]()
