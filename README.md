@@ -37,7 +37,7 @@ The installer downloads the latest release, verifies its SHA-256 checksum, insta
 ## Features
 
 - **One-click sessions** — presets (`2h` / `4h` / ∞), natural language (`8h`, `90m`, `2.5h`, `8 hours`), or clock time (`until 6pm`).
-- **Tea-fill timer** — a matcha-green ring fills and steam rises while a session runs, with the live countdown in the ring, menu bar, and floating badge.
+- **Tea-fill timer** — a matcha-green ring fills and steam rises while a session runs, with the live countdown in the ring, menu bar, and floating badge, plus elapsed run time in the window and menu-bar tooltip.
 - **Display + lock screen** — prevents the screen saver *and* lock screen, not just idle sleep (`caffeinate -d -u` + IOPM assertions).
 - **Floating indicator** — a draggable desktop badge with quick actions (double-click +30m, Option-click stop; translucent by default).
 - **Agent-aware** — detects 44+ coding agents and lists the active ones: *“opencode · Claude Code are running.”*

@@ -1716,7 +1716,8 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             duration: duration,
             triggerBusy: triggerBusy,
             agentRunning: agentRunning,
-            agentNames: agentNames
+            agentNames: agentNames,
+            startedAt: sessionStartedAt
         )
         popoverPanel?.apply(state: state)
         windowPanel?.apply(state: state)
@@ -1790,7 +1791,15 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             } else {
                 button.title = endDate.map { " " + Fmt.clockShort($0.timeIntervalSinceNow) } ?? " \u{221E}"
             }
-            button.toolTip = active && endDate != nil ? "Matcha — \(Fmt.clock(endDate!.timeIntervalSinceNow)) left" : (active ? "Matcha — Until you stop" : "Matcha — Ready")
+            let tipLeft = endDate.map { Fmt.clock($0.timeIntervalSinceNow) }
+            var tip = active ? "Matcha — Active" : "Matcha — Ready"
+            if let start = sessionStartedAt {
+                tip = "Matcha — running \(Fmt.elapsed(Date().timeIntervalSince(start)))"
+            }
+            if let left = tipLeft {
+                tip += " \u{00B7} \(left) left"
+            }
+            button.toolTip = tip
         } else {
             button.title = ""
             button.toolTip = active ? "Matcha — Active" : "Matcha — Ready"

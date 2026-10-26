@@ -60,6 +60,7 @@ struct MatchaState {
     var triggerBusy: Bool = false
     var agentRunning: Bool = false
     var agentNames: [String] = []
+    var startedAt: Date?
 }
 
 enum Matcha {
@@ -254,9 +255,21 @@ enum Fmt {
         return date
     }
 
+    static func elapsed(_ seconds: TimeInterval) -> String {
+        let total = Int(max(0, seconds.rounded()))
+        let h = total / 3600
+        let m = (total % 3600) / 60
+        if h > 0 { return "\(h)h \(m)m" }
+        return "\(m)m"
+    }
+
     static func remainingText(_ state: MatchaState) -> String {
         guard let end = state.endDate else { return "Until you stop" }
-        return "\(clock(end.timeIntervalSinceNow)) left \u{00B7} ends \(clockTime.string(from: end))"
+        var prefix = ""
+        if let start = state.startedAt {
+            prefix = "running \(elapsed(Date().timeIntervalSince(start))) \u{00B7} "
+        }
+        return "\(prefix)\(clock(end.timeIntervalSinceNow)) left \u{00B7} ends \(clockTime.string(from: end))"
     }
 
     static func remainingShort(_ state: MatchaState) -> String {
