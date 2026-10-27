@@ -261,6 +261,8 @@ final class PanelView: NSView {
             durationInput.focus()
             return
         }
+        durationInput.clear()
+        durationInput.isHidden = true
         onPreset?(sender.tag == 0 ? nil : TimeInterval(sender.tag))
     }
 
