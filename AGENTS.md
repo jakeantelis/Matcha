@@ -44,7 +44,7 @@ Add a test to `Tests/main.swift` if adding to the built-in list.
 
 ## Release
 
-- 1.5.0 is published. Read `docs/NOTARIZATION-TODO.md` before any release action.
+- 1.5.1 is published.
 - `Tools/release.sh` — build universal binary, sign with the verified Apple
   Developer ID certificate, notarize, staple, and zip. It refuses `--publish`
   unless signing and notarization both succeed.
@@ -55,7 +55,6 @@ Add a test to `Tests/main.swift` if adding to the built-in list.
 - `release.sh` rebuilds, so its ZIP SHA-256 changes every run. Compute the final
   SHA first, then update `Casks/matcha.rb`, then publish the existing artifact.
 - After a release: update `Casks/matcha.rb` version + SHA-256.
-- See `docs/NOTARIZATION-TODO.md` for the full handoff.
 
 ## Notes
 

@@ -10,8 +10,7 @@
 [![Built with Swift](https://img.shields.io/badge/Swift-AppKit-F05138)]()
 
 <p align="center">
-  <img src="docs/shot-idle-card2.png" width="260" alt="Matcha idle — sleep allowed">
-  <img src="docs/shot-active-card2.png" width="260" alt="Matcha active — awake">
+  <img src="docs/demo.gif" width="420" alt="Matcha toggling from sleep-allowed to awake — the ring fills green and the cup steams">
 </p>
 
 <p align="center"><b>Works with</b> · Claude Code · Codex · Cursor · opencode · Aider · Gemini CLI · Windsurf · <i>and 44+ more</i></p>
@@ -29,6 +28,12 @@ curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/insta
 The installer downloads the latest release, verifies its SHA-256 checksum, installs Matcha to `/Applications`, launches it, and configures supported coding agents. Rerun it anytime to update; skip agent setup with `| sh -s -- --no-agents`.
 
 > **Signing status:** Matcha is signed with an Apple Developer ID certificate and notarized by Apple, so Gatekeeper opens it without workarounds.
+
+**Prefer to download?** Grab either from the [releases page](https://github.com/jakeantelis/Matcha/releases):
+
+- **Disk image (easiest, GUI):** open `Matcha.dmg` and drag **Matcha** into the **Applications** folder.
+- **Homebrew:** `brew install --cask matcha` (via the tap — see [Homebrew](#homebrew) below).
+- **Zip (manual):** unzip `Matcha.zip` and move **Matcha.app** to **Applications**.
 
 **Mac App Store:** Exploring native Mac App Store distribution for the future — watch the [releases page](https://github.com/jakeantelis/Matcha/releases) for announcements.
 

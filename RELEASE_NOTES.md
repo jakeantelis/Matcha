@@ -1,6 +1,8 @@
-# Matcha 1.5.0
+# Matcha 1.5.1
 
 A quiet, green keep-awake timer for builds, exports, and AI coding agents.
+
+**1.5.1** re-signs the app with a new Apple Developer ID certificate (the previous certificate's CA retires February 1, 2027) and refreshes notarization — no functional changes from 1.5.0.
 
 ## Install
 
