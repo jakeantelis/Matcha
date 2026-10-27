@@ -48,9 +48,10 @@ Add a test to `Tests/main.swift` if adding to the built-in list.
 - `Tools/release.sh` — build universal binary, sign with the verified Apple
   Developer ID certificate, notarize, staple, and zip. It refuses `--publish`
   unless signing and notarization both succeed.
-- Signing cert fingerprint: `1A1B3DA615C8C01B1B1FB2123689A84C5E362B16`.
-  It expires **2027-02-01** (legacy Developer ID CA retirement). Replace with a
-  G2 Sub-CA certificate before signing any build after that date.
+- Signing cert fingerprint: `D430FCAFBA0DBC0F48D765E55C07BF3BA1FCEF85` (G2 Sub-CA,
+  expires **2027-11-26**, renews annually). The legacy cert
+  `1A1B3DA615C8C01B1B1FB2123689A84C5E362B16` (expires 2027-02-01) stays in the
+  keychain as a backup — do not revoke it.
 - `release.sh` rebuilds, so its ZIP SHA-256 changes every run. Compute the final
   SHA first, then update `Casks/matcha.rb`, then publish the existing artifact.
 - After a release: update `Casks/matcha.rb` version + SHA-256.

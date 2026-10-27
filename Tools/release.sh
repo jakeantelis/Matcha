@@ -7,7 +7,7 @@ TMP=build/universal
 DIST=dist
 VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Resources/Info.plist)
 
-DEV_ID="1A1B3DA615C8C01B1B1FB2123689A84C5E362B16"
+DEV_ID="D430FCAFBA0DBC0F48D765E55C07BF3BA1FCEF85"
 NOTARY_PROFILE="jake-antelis"
 
 rm -rf "$APP" "$TMP"
@@ -88,8 +88,36 @@ ditto -c -k --norsrc --noextattr --keepParent "$APP" "$DIST/Matcha.zip"
 echo "Packaged $DIST/Matcha.zip ($VERSION) signed=$SIGNED notarized=$NOTARIZED"
 cat "$DIST/Matcha.zip.sha256"
 
+# ---- DMG (friendly drag-to-Applications installer) ----
+DMG="$DIST/Matcha.dmg"
+DMG_NOTARIZED=false
+DMG_STAGE=build/dmg
+rm -f "$DMG" "$DMG.sha256"
+rm -rf "$DMG_STAGE"
+mkdir -p "$DMG_STAGE"
+cp -R "$APP" "$DMG_STAGE/Matcha.app"
+ln -s /Applications "$DMG_STAGE/Applications"
+hdiutil create -volname "Matcha" -srcfolder "$DMG_STAGE" -fs HFS+ -format UDZO -ov "$DMG" >/dev/null
+rm -rf "$DMG_STAGE"
+
+if [[ "$SIGNED" == true ]]; then
+    codesign --force --timestamp --sign "$DEV_ID" "$DMG"
+fi
+if [[ "$NOTARIZED" == true ]]; then
+    echo "Notarizing DMG..."
+    xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait
+    xcrun stapler staple "$DMG"
+    DMG_NOTARIZED=true
+    echo "DMG notarized and stapled."
+else
+    echo "note: DMG notarization skipped (app not notarized)"
+fi
+(cd "$DIST" && shasum -a 256 Matcha.dmg > Matcha.dmg.sha256)
+echo "Packaged $DMG ($VERSION) signed=$SIGNED notarized=$DMG_NOTARIZED"
+cat "$DIST/Matcha.dmg.sha256"
+
 if [[ "${1:-}" == "--publish" ]]; then
-    if [[ "$SIGNED" != true || "$NOTARIZED" != true ]]; then
+    if [[ "$SIGNED" != true || "$NOTARIZED" != true || "$DMG_NOTARIZED" != true ]]; then
         echo "ERROR: refusing to publish without Apple Developer ID signing and notarization" >&2
         exit 1
     fi
@@ -97,6 +125,8 @@ if [[ "${1:-}" == "--publish" ]]; then
     gh release create "v$VERSION" \
         "$DIST/Matcha.zip" \
         "$DIST/Matcha.zip.sha256" \
+        "$DIST/Matcha.dmg" \
+        "$DIST/Matcha.dmg.sha256" \
         --title "Matcha $VERSION" \
         --notes-file RELEASE_NOTES.md
 fi
