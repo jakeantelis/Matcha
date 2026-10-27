@@ -44,15 +44,16 @@ Add a test to `Tests/main.swift` if adding to the built-in list.
 
 ## Release
 
-- **PUBLICATION ON HOLD:** Matcha 1.5.0 is built, signed, notarized, and stapled
-  locally but must **not** be pushed, tagged, released, or published to Homebrew
-  until the developer-account name review is resolved. Read
-  `docs/NOTARIZATION-TODO.md` before any release action.
+- 1.5.0 is published. Read `docs/NOTARIZATION-TODO.md` before any release action.
 - `Tools/release.sh` — build universal binary, sign with the verified Apple
   Developer ID certificate, notarize, staple, and zip. It refuses `--publish`
   unless signing and notarization both succeed.
+- Signing cert fingerprint: `1A1B3DA615C8C01B1B1FB2123689A84C5E362B16`.
+  It expires **2027-02-01**.
+- `release.sh` rebuilds, so its ZIP SHA-256 changes every run. Compute the final
+  SHA first, then update `Casks/matcha.rb`, then publish the existing artifact.
 - After a release: update `Casks/matcha.rb` version + SHA-256.
-- See `docs/NOTARIZATION-TODO.md` for the current handoff and release hold.
+- See `docs/NOTARIZATION-TODO.md` for the full handoff.
 
 ## Notes
 

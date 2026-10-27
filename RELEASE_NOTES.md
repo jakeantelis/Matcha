@@ -11,9 +11,11 @@ curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/insta
 Requires macOS 11+ (universal). **Signed with a Developer ID and notarized by
 Apple**, so Gatekeeper opens it without workarounds.
 
-Or install with Homebrew:
+Or install with Homebrew (tap until the official cask merges):
 
 ```sh
+brew tap jakeantelis/matcha
+brew trust jakeantelis/matcha
 brew install --cask matcha
 ```
 

@@ -28,7 +28,7 @@ curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/insta
 
 The installer downloads the latest release, verifies its SHA-256 checksum, installs Matcha to `/Applications`, launches it, and configures supported coding agents. Rerun it anytime to update; skip agent setup with `| sh -s -- --no-agents`.
 
-> **Signing status:** Matcha is currently ad-hoc signed and not yet Apple-notarized. The installer above is the recommended first-launch path while Developer ID signing and notarization are being completed.
+> **Signing status:** Matcha is signed with an Apple Developer ID certificate and notarized by Apple, so Gatekeeper opens it without workarounds.
 
 **Mac App Store:** Exploring native Mac App Store distribution for the future — watch the [releases page](https://github.com/jakeantelis/Matcha/releases) for announcements.
 
