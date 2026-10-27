@@ -44,13 +44,22 @@ Add a test to `Tests/main.swift` if adding to the built-in list.
 
 ## Release
 
-- `Tools/release.sh` — build universal binary, sign (Developer ID or ad-hoc fallback), zip.
-- `Tools/release.sh --publish` — above + notarize + staple + GitHub release.
+- **PUBLICATION ON HOLD:** Matcha 1.5.0 is built, signed, notarized, and stapled
+  locally but must **not** be pushed, tagged, released, or published to Homebrew
+  until the developer-account name review is resolved. Read
+  `docs/NOTARIZATION-TODO.md` before any release action.
+- `Tools/release.sh` — build universal binary, sign with the verified Apple
+  Developer ID certificate, notarize, staple, and zip. It refuses `--publish`
+  unless signing and notarization both succeed.
 - After a release: update `Casks/matcha.rb` version + SHA-256.
-- See `docs/NOTARIZATION-TODO.md` for the current notarization blocker.
+- See `docs/NOTARIZATION-TODO.md` for the current handoff and release hold.
 
 ## Notes
 
 - Target: macOS 11+ (universal arm64 + x86_64).
+- **Context economy:** The user pays for model tokens and wants lean sessions.
+  Read `Sources/` files in targeted chunks (grep first, then narrow reads), do not
+  re-read a file you have already seen, avoid restating code or history, and keep
+  replies short. Prefer `git status`/`git diff --stat` over full diffs.
 - No external dependencies — only system frameworks (AppKit, Carbon, IOKit, ServiceManagement, UserNotifications).
-- Git: `main` branch, squash or linear history, push when tests pass.
+- Git: `main` branch, squash or linear history, push when tests pass and no release hold is active.

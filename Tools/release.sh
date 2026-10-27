@@ -7,8 +7,8 @@ TMP=build/universal
 DIST=dist
 VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Resources/Info.plist)
 
-DEV_ID="Developer ID Application: Jake Antelis"
-NOTARY_PROFILE="matcha"
+DEV_ID="1A1B3DA615C8C01B1B1FB2123689A84C5E362B16"
+NOTARY_PROFILE="jake-antelis"
 
 rm -rf "$APP" "$TMP"
 mkdir -p "$TMP/arm64" "$TMP/x86_64" "$APP/Contents/MacOS" "$APP/Contents/Resources"
@@ -43,8 +43,12 @@ SIGNED=false
 if security find-identity -v -p codesigning 2>/dev/null | grep -q "$DEV_ID"; then
     echo "Signing with $DEV_ID (hardened runtime + timestamp)..."
     if codesign --force --options runtime --timestamp --sign "$DEV_ID" "$APP" 2>&1; then
-        codesign --verify --deep --strict "$APP"
-        SIGNED=true
+        if codesign -dv --verbose=2 "$APP" 2>&1 | grep "Authority=Developer ID Certification Authority" >/dev/null; then
+            codesign --verify --deep --strict "$APP"
+            SIGNED=true
+        else
+            echo "warning: signing identity is not Apple-issued; Developer ID Certification Authority is missing" >&2
+        fi
     fi
 fi
 if [[ "$SIGNED" != true ]]; then
@@ -85,6 +89,11 @@ echo "Packaged $DIST/Matcha.zip ($VERSION) signed=$SIGNED notarized=$NOTARIZED"
 cat "$DIST/Matcha.zip.sha256"
 
 if [[ "${1:-}" == "--publish" ]]; then
+    if [[ "$SIGNED" != true || "$NOTARIZED" != true ]]; then
+        echo "ERROR: refusing to publish without Apple Developer ID signing and notarization" >&2
+        exit 1
+    fi
+    spctl -a -vv "$APP"
     gh release create "v$VERSION" \
         "$DIST/Matcha.zip" \
         "$DIST/Matcha.zip.sha256" \
