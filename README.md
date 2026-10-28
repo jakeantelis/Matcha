@@ -15,7 +15,7 @@
 
 <p align="center"><b>Great for</b> · audio &amp; video exports · renders · big downloads · backups · long builds</p>
 
-<p align="center"><b>Works with</b> · Claude Code · Cursor · Copilot · Codex · Gemini CLI · Windsurf · <i>and 38 more</i></p>
+<p align="center"><b>Works with</b> · Claude Code · Cursor · Copilot · Codex · Gemini CLI · Windsurf · <i>and 39 more</i></p>
 
 Matcha is a tiny macOS menu-bar utility that keeps your display on and lock screen away while exports, renders, downloads, or long builds run. See what's new in [`RELEASE_NOTES.md`](RELEASE_NOTES.md).
 
@@ -43,7 +43,7 @@ The installer downloads the latest release, verifies its SHA-256 checksum, insta
 - **Tea-fill timer**: a matcha-green ring fills and steam rises while a session runs, with the live countdown in the ring, menu bar, and floating badge, plus elapsed run time in the window and menu-bar tooltip.
 - **Display + lock screen**: prevents the screen saver *and* lock screen, not just idle sleep (`caffeinate -d -u` + IOPM assertions).
 - **Floating indicator**: a draggable desktop badge with quick actions (double-click +30m, Option-click stop; translucent by default).
-- **Agent-aware**: detects 44+ coding agents and lists the active ones: *“opencode · Claude Code are running.”*
+- **Agent-aware**: detects 45+ coding agents and lists the active ones: *“opencode · Claude Code are running.”*
 - **CLI & scripting**: `matcha run -- <cmd>` stays awake for exactly as long as the command runs.
 - **Crash-safe**: timed sessions resume after a crash or force-quit; a normal Quit ends them.
 - **Battery guard**: stops at user-adjustable threshold (default 20%) on battery.
@@ -76,7 +76,7 @@ Whichever you choose, visual floater, menu bar, hotkeys, or pure CLI, Matcha has
 | :--- | :---: | :---: | :---: |
 | **Prevents System Sleep** | ✅ | ✅ | ✅ |
 | **Keeps Screen + Lock Screen Awake** | ✅ | ✅ | ⚠️ *(Requires `-d -u` flags)* |
-| **Detects AI Coding Agents** (44+ built-in) | ✅ | ❌ | ❌ |
+| **Detects AI Coding Agents** (45+ built-in) | ✅ | ❌ | ❌ |
 | **Agent CLI (`matcha run -- <cmd>`)** | ✅ | ❌ | ✅ *(native `caffeinate -i <cmd>`)* |
 | **Tea-Fill Visual Timer & Floating Badge** | ✅ | ❌ *(Menu bar only)* | ❌ *(Terminal only)* |
 | **Schedules & Watch-Lists** | ✅ | ✅ | ❌ |
@@ -92,7 +92,7 @@ Whichever you choose, visual floater, menu bar, hotkeys, or pure CLI, Matcha has
 
 ## Coding agents
 
-Matcha ships skills/instructions for Claude Code, opencode, Codex, Gemini, Windsurf, Cursor, and Aider, and detects **44 built-in agents** plus anything you add.
+Matcha ships skills/instructions for Claude Code, opencode, Codex, Gemini, Windsurf, Cursor, and Aider, and detects **45 built-in agents** plus anything you add.
 
 **How detection works, you pick the level:**
 

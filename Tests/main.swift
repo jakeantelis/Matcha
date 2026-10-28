@@ -34,6 +34,7 @@ check("normalize trims", AgentRegistry.normalize("  h@x "), "")
 check("label for builtin", AgentRegistry.label(for: "opencode"), "opencode")
 check("label for unknown falls back", AgentRegistry.label(for: "my-agent"), "my-agent")
 check("builtin count >= 40", AgentRegistry.builtIn.count >= 40, true)
+check("label for antigravity", AgentRegistry.label(for: "antigravity"), "Antigravity")
 
 // --- Fmt.clockShort ---
 check("clockShort 2.5h", Fmt.clockShort(9000), "2h30m")
