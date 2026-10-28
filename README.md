@@ -145,11 +145,10 @@ Needs only the Xcode Command Line Tools (`swiftc`).
 
 ### Homebrew
 
-The official cask is in review at [homebrew-cask#296800](https://github.com/Homebrew/homebrew-cask/pull/296800). Until it merges, use the tap:
+Install from the Matcha tap:
 
 ```sh
 brew tap jakeantelis/matcha
-brew trust jakeantelis/matcha
 brew install --cask matcha
 ```
 
