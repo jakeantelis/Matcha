@@ -84,7 +84,7 @@ Whichever you choose — visual floater, menu bar, hotkeys, or pure CLI — Matc
 | **Schedules & Watch-Lists** | ✅ | ✅ | ❌ |
 | **Saved Session Templates** | ✅ | ❌ | ❌ |
 | **Idle Auto-Stop & Battery Guard** | ✅ | ✅ | ❌ |
-| **Network & Clamshell Guards** | ✅ | ⚠️ *(Wi-Fi triggers)* | ❌ |
+| **Network & Clamshell Guards** | ✅ | ✅ *(Wi-Fi + closed-display)* | ❌ |
 | **Quick Command Palette (`⌃⌥⌘K`)** | ✅ | ❌ | ❌ |
 | **Post-Session Actions** (Sound / Sleep) | ✅ | ❌ | ❌ |
 | **Tabbed Local Analytics & Stats** | ✅ | ❌ | ❌ |
