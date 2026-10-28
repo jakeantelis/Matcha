@@ -1,5 +1,6 @@
 import AppKit
 import ServiceManagement
+import UniformTypeIdentifiers
 
 final class PreferencesWindowController: NSObject {
     static let shared = PreferencesWindowController()
@@ -298,19 +299,26 @@ final class PreferencesWindowController: NSObject {
         stack.addArrangedSubview(agentListLabel)
 
         header("Watch Apps", in: stack)
-        let watchLabel = NSTextField(labelWithString: "Keep awake while these apps run (comma separated):")
+        let watchLabel = NSTextField(labelWithString: "Keep awake while these apps run — type names, drag apps in, or use Add App…:")
         watchLabel.font = NSFont.systemFont(ofSize: 11)
         watchLabel.textColor = .secondaryLabelColor
         stack.addArrangedSubview(watchLabel)
 
-        let watchField = NSTextField()
+        let watchField = WatchAppsField()
         watchField.placeholderString = "e.g. Logic Pro, Final Cut Pro, Blender"
         watchField.stringValue = (UserDefaults.standard.stringArray(forKey: Pref.watchApps) ?? []).joined(separator: ", ")
+        watchField.identifier = NSUserInterfaceItemIdentifier("watchAppsField")
         watchField.translatesAutoresizingMaskIntoConstraints = false
         watchField.widthAnchor.constraint(equalToConstant: 380).isActive = true
         watchField.target = self
         watchField.action = #selector(watchAppsChanged(_:))
+        watchField.onDropApps = { [weak self] names in self?.addWatchApps(names) }
         stack.addArrangedSubview(watchField)
+
+        let addWatchBtn = NSButton(title: "Add App…", target: self, action: #selector(addWatchAppClicked(_:)))
+        addWatchBtn.bezelStyle = .rounded
+        addWatchBtn.controlSize = .small
+        stack.addArrangedSubview(addWatchBtn)
 
         header("Session Templates", in: stack)
         let templates = TemplateStore.all
@@ -603,6 +611,41 @@ final class PreferencesWindowController: NSObject {
         NotificationCenter.default.post(name: .matchaPrefsChanged, object: nil)
     }
 
+    @objc private func addWatchAppClicked(_ sender: NSButton) {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = true
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.prompt = "Add"
+        panel.message = "Choose apps to keep your Mac awake while they run"
+        if #available(macOS 11.0, *) {
+            panel.allowedContentTypes = [.application]
+        } else {
+            panel.allowedFileTypes = ["app"]
+        }
+        guard panel.runModal() == .OK else { return }
+        let names = panel.urls
+            .filter { $0.pathExtension.lowercased() == "app" }
+            .map { FileManager.default.displayName(atPath: $0.path) }
+        addWatchApps(names)
+    }
+
+    private func addWatchApps(_ names: [String]) {
+        var list = UserDefaults.standard.stringArray(forKey: Pref.watchApps) ?? []
+        for raw in names {
+            let name = raw.trimmingCharacters(in: .whitespaces)
+            guard !name.isEmpty,
+                  !list.contains(where: { $0.caseInsensitiveCompare(name) == .orderedSame }) else { continue }
+            list.append(name)
+        }
+        UserDefaults.standard.set(list, forKey: Pref.watchApps)
+        NotificationCenter.default.post(name: .matchaPrefsChanged, object: nil)
+        if let field = window?.contentView?.findSubview(withIdentifier: NSUserInterfaceItemIdentifier("watchAppsField")) as? NSTextField {
+            field.stringValue = list.joined(separator: ", ")
+        }
+    }
+
     @objc private func saveTemplate(_ sender: NSButton) {
         guard let contentView = sender.superview?.superview else { return }
         guard let nameField = contentView.findSubview(withIdentifier: NSUserInterfaceItemIdentifier("templateName")) as? NSTextField else { return }
@@ -742,5 +785,36 @@ final class PreferencesWindowController: NSObject {
             let dur = s.isEndless ? "until stopped" : Fmt.clockShort(s.durationSeconds)
             return "\(s.name) · \(days) @ \(String(format: "%d:%02d", s.hour, s.minute)) · \(dur)"
         }.joined(separator: "\n")
+    }
+}
+
+final class WatchAppsField: NSTextField {
+    var onDropApps: (([String]) -> Void)?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        registerForDraggedTypes([.fileURL])
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        registerForDraggedTypes([.fileURL])
+    }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        appURLs(from: sender).isEmpty ? [] : .copy
+    }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        let names = appURLs(from: sender).map { FileManager.default.displayName(atPath: $0.path) }
+        guard !names.isEmpty else { return false }
+        onDropApps?(names)
+        return true
+    }
+
+    private func appURLs(from sender: NSDraggingInfo) -> [URL] {
+        let options: [NSPasteboard.ReadingOptionKey: Any] = [.urlReadingFileURLsOnly: true]
+        let urls = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: options) as? [URL] ?? []
+        return urls.filter { $0.pathExtension.lowercased() == "app" }
     }
 }
