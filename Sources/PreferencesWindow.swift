@@ -52,15 +52,49 @@ final class PreferencesWindowController: NSObject {
         populateAutomationTab(t3)
         populateAnalyticsTab(t4)
 
+        let footer = makeFooter()
+
         panel.contentView?.addSubview(tabView)
+        panel.contentView?.addSubview(footer)
         NSLayoutConstraint.activate([
             tabView.topAnchor.constraint(equalTo: panel.contentView!.topAnchor),
             tabView.leadingAnchor.constraint(equalTo: panel.contentView!.leadingAnchor),
             tabView.trailingAnchor.constraint(equalTo: panel.contentView!.trailingAnchor),
-            tabView.bottomAnchor.constraint(equalTo: panel.contentView!.bottomAnchor)
+            tabView.bottomAnchor.constraint(equalTo: footer.topAnchor),
+            footer.leadingAnchor.constraint(equalTo: panel.contentView!.leadingAnchor),
+            footer.trailingAnchor.constraint(equalTo: panel.contentView!.trailingAnchor),
+            footer.bottomAnchor.constraint(equalTo: panel.contentView!.bottomAnchor),
+            footer.heightAnchor.constraint(equalToConstant: 34)
         ])
 
         return panel
+    }
+
+    private func makeFooter() -> NSView {
+        let bar = NSView()
+        bar.translatesAutoresizingMaskIntoConstraints = false
+
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+        let label = NSTextField(labelWithString: version.isEmpty ? "Matcha" : "Matcha \(version)")
+        label.font = NSFont.systemFont(ofSize: 11)
+        label.textColor = .secondaryLabelColor
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        let button = NSButton(title: "Check for Updates", target: NSApp.delegate, action: Selector(("checkForUpdates:")))
+        button.bezelStyle = .inline
+        button.controlSize = .small
+        button.font = NSFont.systemFont(ofSize: 11)
+        button.translatesAutoresizingMaskIntoConstraints = false
+
+        bar.addSubview(label)
+        bar.addSubview(button)
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: bar.leadingAnchor, constant: 16),
+            label.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
+            button.trailingAnchor.constraint(equalTo: bar.trailingAnchor, constant: -12),
+            button.centerYAnchor.constraint(equalTo: bar.centerYAnchor)
+        ])
+        return bar
     }
 
     private func makeScrollView(with stack: NSStackView) -> NSScrollView {
