@@ -19,7 +19,7 @@ Matcha is a tiny macOS menu-bar utility that keeps your display on and lock scre
 
 ## Install
 
-**Recommended: one command.** Open **Terminal** (*Applications → Utilities → Terminal*), paste this, and press **Return**:
+**Recommended — one command:**
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/install.sh | sh
@@ -27,15 +27,11 @@ curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/insta
 
 The installer downloads the latest release, verifies its SHA-256 checksum, installs Matcha to `/Applications`, launches it, and configures supported coding agents. Rerun it anytime to update; skip agent setup with `| sh -s -- --no-agents`.
 
-> **Signing status:** Matcha is signed with an Apple Developer ID certificate and notarized by Apple, so Gatekeeper opens it without workarounds.
-
-**Prefer to download?** Grab either from the [releases page](https://github.com/jakeantelis/Matcha/releases):
+**Prefer to download?** Grab it from the [releases page](https://github.com/jakeantelis/Matcha/releases):
 
 - **Disk image (easiest, GUI):** open `Matcha.dmg` and drag **Matcha** into the **Applications** folder.
 - **Homebrew:** `brew install --cask matcha` (via the tap — see [Homebrew](#homebrew) below).
 - **Zip (manual):** unzip `Matcha.zip` and move **Matcha.app** to **Applications**.
-
-**Mac App Store:** Exploring native Mac App Store distribution for the future — watch the [releases page](https://github.com/jakeantelis/Matcha/releases) for announcements.
 
 *Requires macOS 11+ (universal — Apple Silicon & Intel). Allow notifications for session ending warnings and agent prompts.*
 
