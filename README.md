@@ -19,7 +19,7 @@ Matcha is a tiny macOS menu-bar utility that keeps your display on and lock scre
 
 ## Install
 
-**Recommended — one command:**
+**Recommended, one command:**
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/jakeantelis/Matcha/main/Tools/install.sh | sh
@@ -30,31 +30,31 @@ The installer downloads the latest release, verifies its SHA-256 checksum, insta
 **Prefer to download?** Grab it from the [releases page](https://github.com/jakeantelis/Matcha/releases):
 
 - **Disk image (easiest, GUI):** open `Matcha.dmg` and drag **Matcha** into the **Applications** folder.
-- **Homebrew:** `brew install --cask matcha` (via the tap — see [Homebrew](#homebrew) below).
+- **Homebrew:** `brew install --cask matcha` (via the tap, see [Homebrew](#homebrew) below).
 - **Zip (manual):** unzip `Matcha.zip` and move **Matcha.app** to **Applications**.
 
-*Requires macOS 11+ (universal — Apple Silicon & Intel). Allow notifications for session ending warnings and agent prompts.*
+*Requires macOS 11+ (universal, Apple Silicon & Intel). Allow notifications for session ending warnings and agent prompts.*
 
 ## Features
 
-- **One-click sessions** — presets (`2h` / `4h` / ∞), natural language (`8h`, `90m`, `2.5h`, `8 hours`), or clock time (`until 6pm`).
-- **Tea-fill timer** — a matcha-green ring fills and steam rises while a session runs, with the live countdown in the ring, menu bar, and floating badge, plus elapsed run time in the window and menu-bar tooltip.
-- **Display + lock screen** — prevents the screen saver *and* lock screen, not just idle sleep (`caffeinate -d -u` + IOPM assertions).
-- **Floating indicator** — a draggable desktop badge with quick actions (double-click +30m, Option-click stop; translucent by default).
-- **Agent-aware** — detects 44+ coding agents and lists the active ones: *“opencode · Claude Code are running.”*
-- **CLI & scripting** — `matcha run -- <cmd>` stays awake for exactly as long as the command runs.
-- **Crash-safe** — timed sessions resume after a crash or force-quit; a normal Quit ends them.
-- **Battery guard** — stops at user-adjustable threshold (default 20%) on battery.
-- **Watch-lists, schedules & templates** — stay awake while an app runs, at scheduled days/times, or with saved one-click session templates.
-- **Idle auto-stop** — automatically stops if your Mac has been idle for a configured number of minutes.
-- **Shortcuts & App Intents** — full Siri and Shortcuts support for starting, stopping, toggling, extending, and checking status.
-- **xbar plugin** — integration for xbar / BitBar menu bar monitoring and control.
-- **Network & Clamshell Guard** — Optional network sleep prevention (`NetworkClientActive`) and clamshell/lid-closed wake support when connected to power/display.
-- **Quick Command Palette** — Spotlight-style instant launcher (`⌃⌥⌘K`) to type durations, templates, or commands.
-- **Post-Session Actions** — Optionally play a sound or put your Mac to sleep when a session finishes.
-- **Menu Bar Icon Customization** — Choose between the matcha cup, a minimal leaf, or a status dot icon.
-- **Custom Agent Manager** — Easily add custom agent process names via Settings without manual file edits.
-- **Export & Webhooks** — Export session history to JSON/CSV and dispatch webhooks on session completion.
+- **One-click sessions**: presets (`2h` / `4h` / ∞), natural language (`8h`, `90m`, `2.5h`, `8 hours`), or clock time (`until 6pm`).
+- **Tea-fill timer**: a matcha-green ring fills and steam rises while a session runs, with the live countdown in the ring, menu bar, and floating badge, plus elapsed run time in the window and menu-bar tooltip.
+- **Display + lock screen**: prevents the screen saver *and* lock screen, not just idle sleep (`caffeinate -d -u` + IOPM assertions).
+- **Floating indicator**: a draggable desktop badge with quick actions (double-click +30m, Option-click stop; translucent by default).
+- **Agent-aware**: detects 44+ coding agents and lists the active ones: *“opencode · Claude Code are running.”*
+- **CLI & scripting**: `matcha run -- <cmd>` stays awake for exactly as long as the command runs.
+- **Crash-safe**: timed sessions resume after a crash or force-quit; a normal Quit ends them.
+- **Battery guard**: stops at user-adjustable threshold (default 20%) on battery.
+- **Watch-lists, schedules & templates**: stay awake while an app runs, at scheduled days/times, or with saved one-click session templates.
+- **Idle auto-stop**: automatically stops if your Mac has been idle for a configured number of minutes.
+- **Shortcuts & App Intents**: full Siri and Shortcuts support for starting, stopping, toggling, extending, and checking status.
+- **xbar plugin**: integration for xbar / BitBar menu bar monitoring and control.
+- **Network & Clamshell Guard**: Optional network sleep prevention (`NetworkClientActive`) and clamshell/lid-closed wake support when connected to power/display.
+- **Quick Command Palette**: Spotlight-style instant launcher (`⌃⌥⌘K`) to type durations, templates, or commands.
+- **Post-Session Actions**: Optionally play a sound or put your Mac to sleep when a session finishes.
+- **Menu Bar Icon Customization**: Choose between the matcha cup, a minimal leaf, or a status dot icon.
+- **Custom Agent Manager**: Easily add custom agent process names via Settings without manual file edits.
+- **Export & Webhooks**: Export session history to JSON/CSV and dispatch webhooks on session completion.
 
 ## Control it your way
 
@@ -66,7 +66,7 @@ The installer downloads the latest release, verifies its SHA-256 checksum, insta
 | **CLI** | `matcha on 2h` · `matcha off` · `matcha run -- ./build.sh` · `matcha watch` |
 | **URL / AppleScript** | `open -g "matcha://on?hours=2"` |
 
-Whichever you choose — visual floater, menu bar, hotkeys, or pure CLI — Matcha has you covered.
+Whichever you choose, visual floater, menu bar, hotkeys, or pure CLI, Matcha has you covered.
 
 ## How it compares
 
@@ -92,12 +92,12 @@ Whichever you choose — visual floater, menu bar, hotkeys, or pure CLI — Matc
 
 Matcha ships skills/instructions for Claude Code, opencode, Codex, Gemini, Windsurf, Cursor, and Aider, and detects **44 built-in agents** plus anything you add.
 
-**How detection works — you pick the level:**
+**How detection works, you pick the level:**
 
 | Mode | Behavior |
 | --- | --- |
-| **Detect & prompt** *(default)* | When an agent is running, Matcha sends a notification: *"Keep your Mac awake?"* — tap **Keep Awake** to start. Never turns on by itself. |
-| **Auto-start** | Settings → **Auto-Start for Coding Agents** — Matcha starts the moment an agent appears and stops when the last one quits (waits a few minutes after a manual stop so it doesn't fight you). |
+| **Detect & prompt** *(default)* | When an agent is running, Matcha sends a notification: *"Keep your Mac awake?"*, tap **Keep Awake** to start. Never turns on by itself. |
+| **Auto-start** | Settings → **Auto-Start for Coding Agents**: Matcha starts the moment an agent appears and stops when the last one quits (waits a few minutes after a manual stop so it doesn't fight you). |
 | **Self-serve** | Agents use `matcha run -- <cmd>` to stay awake for exactly the duration of the command. |
 
 Missing one? Settings → **Add Coding Agent…**, or add names to `~/Library/Application Support/Matcha/agents.txt`.
@@ -107,7 +107,7 @@ Missing one? Settings → **Add Coding Agent…**, or add names to `~/Library/Ap
 <details>
 <summary>Raycast script commands</summary>
 
-The [`Raycast/`](Raycast) folder contains ready-to-use commands — `matcha-toggle`, `matcha-on`, `matcha-off`, `matcha-status`. Point Raycast at the folder as a **Script Command Directory**.
+The [`Raycast/`](Raycast) folder contains ready-to-use commands, `matcha-toggle`, `matcha-on`, `matcha-off`, `matcha-status`. Point Raycast at the folder as a **Script Command Directory**.
 
 </details>
 
@@ -154,4 +154,4 @@ The cask formula lives in [`Casks/matcha.rb`](Casks/matcha.rb).
 
 ## License
 
-[MIT](LICENSE) — free to use, fork, and ship.
+[MIT](LICENSE), free to use, fork, and ship.

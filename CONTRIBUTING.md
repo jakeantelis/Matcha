@@ -5,12 +5,12 @@ with a special focus on build/export jobs and AI coding agents.
 
 ## Ways to contribute
 
-- **Report a bug or request a feature** — open an
+- **Report a bug or request a feature**: open an
   [issue](https://github.com/jakeantelis/Matcha/issues).
-- **Add a coding agent to detection** — edit the `AgentRegistry.builtIn` list in
+- **Add a coding agent to detection**: edit the `AgentRegistry.builtIn` list in
   [`Sources/Support.swift`](Sources/Support.swift) and open a pull request.
-- **Improve docs** — the agent skill, CLI docs, and README all accept PRs.
-- **Fix something you found** — small, focused PRs are easiest to review.
+- **Improve docs**: the agent skill, CLI docs, and README all accept PRs.
+- **Fix something you found**: small, focused PRs are easiest to review.
 
 ## Getting started
 
@@ -26,9 +26,9 @@ cd Matcha
 
 ## Building the app
 
-- `./build.sh` — compile and produce `build/Matcha.app`.
-- `./Tools/release.sh` — build a universal (arm64 + x86_64) binary and zip.
-- `./Tools/release.sh --publish` — create a GitHub release.
+- `./build.sh`, compile and produce `build/Matcha.app`.
+- `./Tools/release.sh`, build a universal (arm64 + x86_64) binary and zip.
+- `./Tools/release.sh --publish`, create a GitHub release.
 
 ## Adding a coding agent
 
@@ -47,6 +47,6 @@ Submit the change as a PR and it ships for everyone.
 
 ## Code style
 
-- Match the existing style — no added comments unless necessary, AppKit/Swift
+- Match the existing style, no added comments unless necessary, AppKit/Swift
   conventions, and keep the `moon/dots`-free, Apple-like aesthetic.
 - Verify with `./build.sh` before pushing.
