@@ -129,6 +129,8 @@ Type `matcha on 2h`, `matcha off`, or `matcha status` from Alfred.
 
 No accounts, analytics, or telemetry. The only network calls are updating and the install you asked for.
 
+**A note on walking away:** Matcha keeps the lock screen away only while a session is active. If you tend to step away from your Mac, turn on **Idle Auto-Stop** (Settings) or use a timed session, so it never stays unlocked longer than you meant to. Idle Auto-Stop ends a manual session after a set idle period, and it leaves running builds, exports, and watched apps alone.
+
 ## Build from source
 
 ```sh
