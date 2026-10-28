@@ -79,18 +79,18 @@ Whichever you choose — visual floater, menu bar, hotkeys, or pure CLI — Matc
 | **Prevents System Sleep** | ✅ | ✅ | ✅ |
 | **Keeps Screen + Lock Screen Awake** | ✅ | ✅ | ⚠️ *(Requires `-d -u` flags)* |
 | **Detects AI Coding Agents** (44+ built-in) | ✅ | ❌ | ❌ |
-| **Agent CLI (`matcha run -- <cmd>`)** | ✅ | ❌ | ⚠️ *(Manual wrapping)* |
+| **Agent CLI (`matcha run -- <cmd>`)** | ✅ | ❌ | ✅ *(native `caffeinate -i <cmd>`)* |
 | **Tea-Fill Visual Timer & Floating Badge** | ✅ | ❌ *(Menu bar only)* | ❌ *(Terminal only)* |
 | **Schedules & Watch-Lists** | ✅ | ✅ | ❌ |
 | **Saved Session Templates** | ✅ | ❌ | ❌ |
-| **Idle Auto-Stop & Battery Guard** | ✅ | ⚠️ *(Battery limit only)* | ❌ |
-| **Network & Clamshell Guards** | ✅ | ❌ | ❌ |
+| **Idle Auto-Stop & Battery Guard** | ✅ | ✅ | ❌ |
+| **Network & Clamshell Guards** | ✅ | ⚠️ *(Wi-Fi triggers)* | ❌ |
 | **Quick Command Palette (`⌃⌥⌘K`)** | ✅ | ❌ | ❌ |
 | **Post-Session Actions** (Sound / Sleep) | ✅ | ❌ | ❌ |
 | **Tabbed Local Analytics & Stats** | ✅ | ❌ | ❌ |
 | **Shortcuts, Apple Intents & xbar** | ✅ | ✅ | ❌ |
 | **App Architecture** | Zero-deps Native Swift | Native AppKit | Built-in Terminal Tool |
-| **Price & License** | Free · OSS · MIT | Free + Paid Tier | Free · OSS |
+| **Price & License** | Free · OSS · MIT | Free | Free · OSS |
 
 ## Coding agents
 
