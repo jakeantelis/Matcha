@@ -1,6 +1,6 @@
 # Matcha
 
-**Keep your Mac awake for builds, exports, and AI coding agents.**
+**Keep your Mac awake for exports, renders, downloads, and long builds.**
 
 > **100% Free & Open Source (MIT)** · No accounts, no subscriptions, no tracking, and zero bloat. Built natively in Swift for macOS.
 
@@ -10,12 +10,12 @@
 [![Built with Swift](https://img.shields.io/badge/Swift-AppKit-F05138)]()
 
 <p align="center">
-  <img src="docs/demo.gif" width="420" alt="Matcha toggling from sleep-allowed to awake — the ring fills green and the cup steams">
+  <img src="docs/demo.gif" width="420" alt="Matcha toggling from sleep-allowed to awake, the ring fills green and the cup steams">
 </p>
 
-<p align="center"><b>Works with</b> · Claude Code · Codex · Cursor · opencode · Aider · Gemini CLI · Windsurf · <i>and 44+ more</i></p>
+<p align="center"><b>Great for</b> · audio &amp; video exports · renders · big downloads · backups · long builds</p>
 
-Matcha is a tiny macOS menu-bar utility that keeps your display on and lock screen away while builds, exports, or AI coding agents run. See what's new in [`RELEASE_NOTES.md`](RELEASE_NOTES.md).
+Matcha is a tiny macOS menu-bar utility that keeps your display on and lock screen away while exports, renders, downloads, or long builds run. See what's new in [`RELEASE_NOTES.md`](RELEASE_NOTES.md).
 
 ## Install
 
