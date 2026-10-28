@@ -1,9 +1,11 @@
-# Matcha 1.5.1
+# Matcha 1.5.2
 
-A quiet, green keep-awake timer for builds, exports, and AI coding agents.
+A quiet, green keep awake timer for builds, exports, and AI coding agents.
 
 ### Changes
-- Re-signed with the new **G2** Developer ID certificate and re-notarized, the previous certificate's CA retires 2027-02-01. No functional changes from 1.5.0.
-- Universal build (Apple Silicon + Intel).
+- New: a version footer in the Settings window with a Check for Updates button.
+- New: add watched apps by dragging them in or with an Add App picker, not just by typing names.
+- Added Google Antigravity to agent detection (now 45 built in agents).
+- Refreshed the demo and tidied the docs.
 
 _Install and uninstall instructions live in the [README](https://github.com/jakeantelis/Matcha#install)._
