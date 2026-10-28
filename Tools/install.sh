@@ -76,8 +76,6 @@ if [ ! -d "$APP" ] || [ ! -x "$APP/Contents/MacOS/Matcha" ]; then
     exit 1
 fi
 
-xattr -dr com.apple.quarantine "$APP" 2>/dev/null || true
-
 if pgrep -x Matcha >/dev/null 2>&1; then
     if [ "$WAS_ON" = 1 ]; then
         echo "Closing Matcha; your session will resume when it reopens."
@@ -98,7 +96,6 @@ fi
 
 rm -rf "$DEST/Matcha.app"
 ditto "$APP" "$DEST/Matcha.app"
-xattr -dr com.apple.quarantine "$DEST/Matcha.app" 2>/dev/null || true
 
 VERSION=$(defaults read "$DEST/Matcha.app/Contents/Info" CFBundleShortVersionString 2>/dev/null || echo "unknown")
 if [ "$UPGRADE" = 1 ]; then
