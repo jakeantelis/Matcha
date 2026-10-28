@@ -15,6 +15,8 @@
 
 <p align="center"><b>Great for</b> · audio &amp; video exports · renders · big downloads · backups · long builds</p>
 
+<p align="center"><b>Works with</b> · Claude Code · Cursor · Copilot · Codex · Gemini CLI · Windsurf · <i>and 38 more</i></p>
+
 Matcha is a tiny macOS menu-bar utility that keeps your display on and lock screen away while exports, renders, downloads, or long builds run. See what's new in [`RELEASE_NOTES.md`](RELEASE_NOTES.md).
 
 ## Install
