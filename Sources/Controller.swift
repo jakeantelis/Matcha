@@ -556,7 +556,9 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         w.isReleasedWhenClosed = false
         w.minSize = contentSize
         w.delegate = self
-        w.center()
+        w.setFrameAutosaveName("MatchaMainWindow")
+        if !w.setFrameUsingName("MatchaMainWindow") { w.center() }
+        w.level = UserDefaults.standard.bool(forKey: Pref.keepWindowOnTop) ? .floating : .normal
 
         let effect = NSVisualEffectView()
         effect.material = .popover
@@ -788,6 +790,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         menu.addItem(toggleItem("Show in Menu Bar", Pref.showMenuBarIcon, #selector(toggleMenuBarIcon(_:))))
         menu.addItem(toggleItem("Show Time in Menu Bar", Pref.menuBarCountdown, #selector(toggleMenuBarCountdown(_:))))
         menu.addItem(toggleItem("Show in Dock", Pref.showInDock, #selector(toggleShowInDock(_:))))
+        menu.addItem(toggleItem("Keep Window on Top", Pref.keepWindowOnTop, #selector(toggleKeepWindowOnTop(_:))))
         menu.addItem(toggleItem("Show Floating Indicator", Pref.showFloatingIndicator, #selector(toggleFloatingIndicator(_:))))
         menu.addItem(toggleItem("Translucent Indicator", Pref.translucentIndicator, #selector(toggleTranslucent(_:))))
         menu.addItem(toggleItem("Animations", Pref.animations, #selector(toggleAnimations(_:))))
@@ -1172,6 +1175,12 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         let value = !UserDefaults.standard.bool(forKey: Pref.showInDock)
         UserDefaults.standard.set(value, forKey: Pref.showInDock)
         applyDockPolicy()
+    }
+
+    @objc private func toggleKeepWindowOnTop(_ sender: NSMenuItem) {
+        let value = !UserDefaults.standard.bool(forKey: Pref.keepWindowOnTop)
+        UserDefaults.standard.set(value, forKey: Pref.keepWindowOnTop)
+        window?.level = value ? .floating : .normal
     }
 
     @objc private func toggleFloatingIndicator(_ sender: NSMenuItem) {

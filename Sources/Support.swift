@@ -107,6 +107,7 @@ enum Pref {
     static let postSessionAction = "postSessionAction"
     static let menuBarStyle = "menuBarStyle"
     static let webhookURL = "webhookURL"
+    static let keepWindowOnTop = "keepWindowOnTop"
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -132,6 +133,7 @@ enum Pref {
             postSessionAction: "none",
             menuBarStyle: "cup",
             webhookURL: "",
+            keepWindowOnTop: false,
         ])
     }
 }
