@@ -1,6 +1,6 @@
 cask "matcha" do
-  version "1.5.3"
-  sha256 "a5ed2effe0188b4b2694e50f30746bf426f10a329b027b1581931a30867204f4"
+  version "1.5.4"
+  sha256 "2222ba9fa7023b61e4ac9248424edef68a79d22a2e77400eeda63caf3bd329f9"
 
   url "https://github.com/jakeantelis/Matcha/releases/download/v#{version}/Matcha.zip"
   name "Matcha"
