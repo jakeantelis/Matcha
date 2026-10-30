@@ -44,7 +44,7 @@ Add a test to `Tests/main.swift` if adding to the built-in list.
 
 ## Release
 
-- 1.5.3 is published.
+- 1.5.4 is published.
 - `Tools/release.sh`, build universal binary, sign with the verified Apple
   Developer ID certificate, notarize, staple, and zip. It refuses `--publish`
   unless signing and notarization both succeed.

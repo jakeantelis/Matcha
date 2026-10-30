@@ -1,9 +1,9 @@
-# Matcha 1.5.3
+# Matcha 1.5.4
 
 A quiet, green keep awake timer for builds, exports, and AI coding agents.
 
 ### Changes
-- The main window now remembers where you put it and reopens there.
-- New: a "Keep Window on Top" option in the gear menu to float the window above other apps.
+- The About panel and Settings footer now credit Antelis Labs, with links to AntelisLabs.com and the GitHub repo.
+- The license copyright holder is now Antelis Labs LLC. Matcha stays free and MIT licensed.
 
 _Install and uninstall instructions live in the [README](https://github.com/jakeantelis/Matcha#install)._
