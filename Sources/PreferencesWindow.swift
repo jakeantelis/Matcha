@@ -2,6 +2,12 @@ import AppKit
 import ServiceManagement
 import UniformTypeIdentifiers
 
+private final class LinkButton: NSButton {
+    override func resetCursorRects() {
+        addCursorRect(bounds, cursor: .pointingHand)
+    }
+}
+
 final class PreferencesWindowController: NSObject {
     static let shared = PreferencesWindowController()
 
@@ -87,11 +93,20 @@ final class PreferencesWindowController: NSObject {
         button.font = NSFont.systemFont(ofSize: 11)
         button.translatesAutoresizingMaskIntoConstraints = false
 
+        let credit = LinkButton(title: "\u{00B7} by Antelis Labs \u{2197}", target: self, action: #selector(openAntelisLabs))
+        credit.isBordered = false
+        credit.font = NSFont.systemFont(ofSize: 11)
+        credit.contentTintColor = .secondaryLabelColor
+        credit.translatesAutoresizingMaskIntoConstraints = false
+
         bar.addSubview(label)
+        bar.addSubview(credit)
         bar.addSubview(button)
         NSLayoutConstraint.activate([
             label.leadingAnchor.constraint(equalTo: bar.leadingAnchor, constant: 16),
             label.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
+            credit.leadingAnchor.constraint(equalTo: label.trailingAnchor, constant: 2),
+            credit.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
             button.trailingAnchor.constraint(equalTo: bar.trailingAnchor, constant: -12),
             button.centerYAnchor.constraint(equalTo: bar.centerYAnchor)
         ])
@@ -500,6 +515,10 @@ final class PreferencesWindowController: NSObject {
                 "\(df.string(from: h.startedAt)) · \(Fmt.clockShort(h.duration)) (\(h.source))"
             }.joined(separator: "\n")
         }
+    }
+
+    @objc private func openAntelisLabs() {
+        NSWorkspace.shared.open(URL(string: "https://antelislabs.com")!)
     }
 
     @objc private func toggled(_ sender: NSButton) {

@@ -157,3 +157,5 @@ The cask formula lives in [`Casks/matcha.rb`](Casks/matcha.rb).
 ## License
 
 [MIT](LICENSE), free to use, fork, and ship.
+
+Built by [Antelis Labs](https://antelislabs.com), native macOS and studio audio tools.

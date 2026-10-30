@@ -496,16 +496,35 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         }
     }
 
+    @objc private func showAbout(_ sender: Any?) {
+        let center = NSMutableParagraphStyle()
+        center.alignment = .center
+        let base: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 11),
+            .foregroundColor: NSColor.secondaryLabelColor,
+            .paragraphStyle: center
+        ]
+        let credits = NSMutableAttributedString(string: "Free and open source\n", attributes: base)
+        func link(_ title: String, _ url: String) -> NSAttributedString {
+            var attrs = base
+            attrs[.link] = URL(string: url)!
+            return NSAttributedString(string: title, attributes: attrs)
+        }
+        credits.append(link("AntelisLabs.com", "https://antelislabs.com"))
+        credits.append(NSAttributedString(string: "  \u{00B7}  ", attributes: base))
+        credits.append(link("GitHub, MIT license", "https://github.com/jakeantelis/Matcha"))
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.orderFrontStandardAboutPanel(options: [.credits: credits])
+    }
+
     private func buildMainMenu() {
         let main = NSMenu()
         let appItem = NSMenuItem()
         main.addItem(appItem)
         let appMenu = NSMenu()
-        appMenu.addItem(
-            withTitle: "About Matcha",
-            action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
-            keyEquivalent: ""
-        )
+        let about = NSMenuItem(title: "About Matcha", action: #selector(showAbout(_:)), keyEquivalent: "")
+        about.target = self
+        appMenu.addItem(about)
         let updates = NSMenuItem(
             title: "Check for Updates\u{2026}",
             action: #selector(checkForUpdates(_:)),

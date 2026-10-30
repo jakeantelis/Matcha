@@ -33,6 +33,8 @@
 	<string>11.0</string>
 	<key>LSUIElement</key>
 	<false/>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 Antelis Labs LLC</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSPrincipalClass</key>
