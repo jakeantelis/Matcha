@@ -2,6 +2,10 @@ import AppKit
 import ServiceManagement
 import UniformTypeIdentifiers
 
+private final class FlippedView: NSView {
+    override var isFlipped: Bool { true }
+}
+
 private final class LinkButton: NSButton {
     override func resetCursorRects() {
         addCursorRect(bounds, cursor: .pointingHand)
@@ -30,7 +34,7 @@ final class PreferencesWindowController: NSObject {
     private func makeWindow() -> NSWindow {
         let panel = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 460, height: 520),
-            styleMask: [.titled, .closable, .fullSizeContentView, .utilityWindow],
+            styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
@@ -115,9 +119,25 @@ final class PreferencesWindowController: NSObject {
 
     private func makeScrollView(with stack: NSStackView) -> NSScrollView {
         let scroll = NSScrollView()
-        scroll.translatesAutoresizingMaskIntoConstraints = false
+        scroll.autoresizingMask = [.width, .height]
         scroll.hasVerticalScroller = true
-        scroll.documentView = stack
+        scroll.drawsBackground = false
+        scroll.automaticallyAdjustsContentInsets = false
+        scroll.contentInsets = NSEdgeInsets()
+        let container = FlippedView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(stack)
+        scroll.documentView = container
+        let clip = scroll.contentView
+        NSLayoutConstraint.activate([
+            stack.topAnchor.constraint(equalTo: container.topAnchor),
+            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            stack.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            container.topAnchor.constraint(equalTo: clip.topAnchor),
+            container.leadingAnchor.constraint(equalTo: clip.leadingAnchor),
+            container.trailingAnchor.constraint(equalTo: clip.trailingAnchor)
+        ])
         return scroll
     }
 
@@ -126,7 +146,7 @@ final class PreferencesWindowController: NSObject {
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 10
-        stack.edgeInsets = NSEdgeInsets(top: 24, left: 28, bottom: 24, right: 28)
+        stack.edgeInsets = NSEdgeInsets(top: 16, left: 28, bottom: 24, right: 28)
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }
