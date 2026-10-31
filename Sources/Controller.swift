@@ -639,8 +639,8 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private func createStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
-            button.image = MenuBarIcon.cup(steaming: active)
-            button.contentTintColor = active ? Matcha.green : nil
+            button.image = symbolImage(["cup.and.saucer", "mug"])
+            button.contentTintColor = nil
             button.imagePosition = .imageLeading
             button.font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
             button.action = #selector(statusClicked)
@@ -1793,28 +1793,23 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         let endingSoon = active && endDate != nil && endDate!.timeIntervalSinceNow <= 300
 
         let style = UserDefaults.standard.string(forKey: Pref.menuBarStyle) ?? "cup"
-        var cupColor: NSColor?
-        if active {
-            let blink = Int(Date().timeIntervalSince1970) % 2 == 0
-            cupColor = endingSoon ? (blink ? NSColor.systemOrange : Matcha.green.withAlphaComponent(0.4)) : Matcha.green
-        }
         switch style {
         case "leaf":
             button.image = symbolImage(active ? ["leaf.fill", "leaf"] : ["leaf"])
         case "dot":
             button.image = symbolImage(active ? ["circle.fill", "circle"] : ["circle"])
         default:
-            button.image = MenuBarIcon.cup(steaming: active, color: cupColor)
+            button.image = symbolImage(active ? ["cup.and.saucer.fill", "cup.and.saucer", "mug.fill", "mug"] : ["cup.and.saucer", "mug"])
         }
 
         let usesCup = style != "leaf" && style != "dot"
-        if usesCup {
-            button.contentTintColor = nil
-        } else if endingSoon {
+        if endingSoon {
             let blink = Int(Date().timeIntervalSince1970) % 2 == 0
             button.contentTintColor = blink
                 ? NSColor.systemOrange
-                : Matcha.green.withAlphaComponent(0.4)
+                : (usesCup ? nil : Matcha.green.withAlphaComponent(0.4))
+        } else if usesCup {
+            button.contentTintColor = nil
         } else {
             button.contentTintColor = active ? Matcha.green : NSColor.tertiaryLabelColor
         }
@@ -1824,7 +1819,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
             if endingSoon {
                 button.title = endDate.map { " \u{26A1}" + Fmt.clockShort($0.timeIntervalSinceNow) } ?? " \u{221E}"
             } else {
-                button.title = endDate.map { " " + Fmt.clockShort($0.timeIntervalSinceNow) } ?? " \u{221E}"
+                button.title = endDate.map { " " + Fmt.clockShort($0.timeIntervalSinceNow) } ?? ""
             }
             let tipLeft = endDate.map { Fmt.clock($0.timeIntervalSinceNow) }
             var tip = active ? "Matcha — Active" : "Matcha — Ready"
