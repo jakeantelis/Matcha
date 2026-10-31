@@ -31,54 +31,45 @@ def swirl(layer,cx,cy,rx,ry,turns=1.25):
         d.ellipse([pts[i][0]-w/2,pts[i][1]-w/2,pts[i][0]+w/2,pts[i][1]+w/2],fill=(255,255,250,240))
 
 def artwork():
-    cx=M/2
-    if False:
-        base=Image.new("RGBA",(M,M),(18,34,26,255))
-        bg=radial((256,256),(128,110),10,190,(36,70,52),(12,24,18)).resize((M,M),Image.BICUBIC).convert("RGBA")
-        im=bg
-    elif False:
-        bg=radial((256,256),(128,96),10,200,(104,176,124),(40,100,66)).resize((M,M),Image.BICUBIC).convert("RGBA"); im=bg
-    else:
-        bg=radial((256,256),(128,92),10,205,(66,148,96),(18,64,42)).resize((M,M),Image.BICUBIC).convert("RGBA"); im=bg
-    sc=0.80 if False else 1.0
-    top=L(510) if True else L(540)
-    R=int(L(312)*sc); BW=int(L(204)*sc); H=int(L(398)*sc); rimh=int(L(128)*sc); bot=top+H
-    if False:
-        rg=Image.new("RGBA",(M,M),(0,0,0,0)); rd=ImageDraw.Draw(rg)
-        rd.ellipse([L(96),L(96),M-L(96),M-L(96)],outline=(70,170,104,255),width=L(30))
-        rd.arc([L(96),L(96),M-L(96),M-L(96)],start=-90,end=150,fill=(170,236,160,255),width=L(30))
-        im=Image.alpha_composite(im,rg)
-    disc=Image.new("RGBA",(M,M),(0,0,0,0)); ImageDraw.Draw(disc).ellipse([cx-int(L(300)*sc),bot-L(4),cx+int(L(300)*sc),bot+L(60)],fill=(255,255,255,30))
-    im=Image.alpha_composite(im,disc)
-    cm=Image.new("L",(M,M),0)
-    ImageDraw.Draw(cm).polygon([(cx-R-L(40),top-L(120)),(cx+R+L(40),top-L(120)),(cx+BW,bot),(cx-BW,bot)],fill=255)
-    cm=cm.filter(ImageFilter.GaussianBlur(L(30))).point(lambda v:255 if v>128 else 0).filter(ImageFilter.GaussianBlur(L(1)))
+    bg=radial((256,256),(128,92),10,205,(66,148,96),(18,64,42)).resize((M,M),Image.BICUBIC).convert("RGBA")
+    im=bg; cx=M/2
+    k=1.12
+    top=L(468); R=int(L(262)*k); H=int(L(240)*k); rimh=int(L(104)*k); bot=top+H
+    layer=Image.new("RGBA",(M,M),(0,0,0,0)); d=ImageDraw.Draw(layer)
+    sw=int(L(372)*k); sy=bot+int(L(8)*k)
+    d.ellipse([cx-sw,sy-int(L(48)*k),cx+sw,sy+int(L(62)*k)],fill=(236,228,206,255))
+    d.ellipse([cx-sw+L(14),sy-int(L(40)*k),cx+sw-L(14),sy+int(L(50)*k)],fill=CREAM)
+    d.ellipse([cx-int(sw*0.60),sy-int(L(22)*k),cx+int(sw*0.60),sy+int(L(36)*k)],fill=(240,233,212,255))
+    hx=cx+R-int(L(10)*k); hy=top+int(L(96)*k)
+    d.ellipse([hx-int(L(92)*k),hy-int(L(74)*k),hx+int(L(92)*k),hy+int(L(74)*k)],outline=CREAM,width=int(L(34)*k))
+    im=Image.alpha_composite(im,layer)
+    # cup body (rounded bowl profile)
+    cm=Image.new("L",(M,M),0); cd=ImageDraw.Draw(cm); pts=[]
+    for i in range(61):
+        t=i/60; w=R*(1-0.62*t**1.6); pts.append((cx+w,top+H*t))
+    poly=pts+[(2*cx-x,y) for x,y in reversed(pts)]
+    cd.polygon(poly,fill=255)
+    cm=cm.filter(ImageFilter.GaussianBlur(L(22))).point(lambda v:255 if v>128 else 0).filter(ImageFilter.GaussianBlur(L(1)))
     ImageDraw.Draw(cm).rectangle([0,0,M,top],fill=0)
+    sh=Image.new("RGBA",(M,M),(0,0,0,0)); ImageDraw.Draw(sh).ellipse([cx-int(L(150)*k),bot-L(6),cx+int(L(150)*k),bot+int(L(40)*k)],fill=(0,0,0,50))
+    im=Image.alpha_composite(im,sh.filter(ImageFilter.GaussianBlur(L(8))))
     im.paste(Image.new("RGBA",(M,M),CREAM),(0,0),cm)
-    # soft second tone on the right for volume, kept subtle
-    tone=Image.new("RGBA",(M,M),(0,0,0,0)); td=ImageDraw.Draw(tone)
-    td.polygon([(cx+int(R*0.42),top),(cx+R+L(40),top),(cx+BW+L(10),bot+L(10)),(cx+int(BW*0.55),bot+L(10))],fill=(222,214,190,255))
-    tm=ImageChops.multiply(tone.split()[3],cm); tone.putalpha(tm.point(lambda v:int(v*0.55)))
+    tone=Image.new("RGBA",(M,M),(0,0,0,0)); ImageDraw.Draw(tone).polygon([(cx+int(R*0.50),top),(cx+R+L(40),top),(cx+R+L(40),bot+L(20)),(cx+int(R*0.50),bot+L(20))],fill=(226,218,194,255))
+    tone.putalpha(ImageChops.multiply(tone.split()[3],cm).point(lambda v:int(v*0.5)))
     im=Image.alpha_composite(im,tone)
-    d=ImageDraw.Draw(im,"RGBA")
-    # slim cream rim, large green surface
-    rim=Image.new("RGBA",(M,M),(0,0,0,0)); rd=ImageDraw.Draw(rim)
-    rd.ellipse([cx-R-L(4),top-rimh/2,cx+R+L(4),top+rimh/2],fill=CREAM); im=Image.alpha_composite(im,rim)
-    ins=int(L(13)*sc)
-    box=[cx-R+ins,top-rimh/2+int(L(9)*sc),cx+R-ins,top+rimh/2-int(L(6)*sc)]
+    rim=Image.new("RGBA",(M,M),(0,0,0,0)); ImageDraw.Draw(rim).ellipse([cx-R-L(4),top-rimh/2,cx+R+L(4),top+rimh/2],fill=CREAM); im=Image.alpha_composite(im,rim)
+    ins=int(L(13)*k); box=[cx-R+ins,top-rimh/2+int(L(9)*k),cx+R-ins,top+rimh/2-int(L(6)*k)]
     tw,th=int(box[2]-box[0]),int(box[3]-box[1])
     surf=radial((tw,th),(tw*0.40,th*0.38),4,tw*0.60,(156,208,92),(62,128,60)).convert("RGBA")
     sm=Image.new("L",(tw,th),0); ImageDraw.Draw(sm).ellipse([0,0,tw-1,th-1],fill=255)
     im.paste(surf,(int(box[0]),int(box[1])),sm)
-    sw=Image.new("RGBA",(M,M),(0,0,0,0)); swirl(sw,(box[0]+box[2])/2,(box[1]+box[3])/2,tw*0.44,th*0.40)
-    sm2=Image.new("L",(M,M),0); ImageDraw.Draw(sm2).ellipse([box[0]+L(6),box[1]+L(5),box[2]-L(6),box[3]-L(5)],fill=255)
-    sw.putalpha(ImageChops.multiply(sw.split()[3],sm2))
-    im=Image.alpha_composite(im,sw.filter(ImageFilter.GaussianBlur(L(0.6))))
-    st=Image.new("RGBA",(M,M),(0,0,0,0)); sd=ImageDraw.Draw(st); base_y=top-rimh/2-int(L(30)*sc); hh=int(L(150)*sc); w=int(L(26)*sc)
-    for dx,ph in ((-int(L(62)*sc),0.0),(int(L(62)*sc),3.14159)):
-        pts=[(cx+dx+math.sin((k/90)*math.pi*2+ph)*int(L(20)*sc),base_y-(k/90)*hh) for k in range(91)]
-        for i in range(len(pts)):
-            sd.ellipse([pts[i][0]-w/2,pts[i][1]-w/2,pts[i][0]+w/2,pts[i][1]+w/2],fill=CREAM)
+    sl=Image.new("RGBA",(M,M),(0,0,0,0)); swirl(sl,(box[0]+box[2])/2,(box[1]+box[3])/2,tw*0.44,th*0.40)
+    m2=Image.new("L",(M,M),0); ImageDraw.Draw(m2).ellipse([box[0]+L(6),box[1]+L(5),box[2]-L(6),box[3]-L(5)],fill=255)
+    sl.putalpha(ImageChops.multiply(sl.split()[3],m2)); im=Image.alpha_composite(im,sl.filter(ImageFilter.GaussianBlur(L(0.6))))
+    st=Image.new("RGBA",(M,M),(0,0,0,0)); sd=ImageDraw.Draw(st); by=top-rimh/2-int(L(28)*k); hh=int(L(130)*k); w=int(L(24)*k)
+    for dx,ph in ((-int(L(56)*k),0.0),(int(L(56)*k),3.14159)):
+        pts=[(cx+dx+math.sin((q/90)*math.pi*2+ph)*int(L(18)*k),by-(q/90)*hh) for q in range(91)]
+        for p in pts: sd.ellipse([p[0]-w/2,p[1]-w/2,p[0]+w/2,p[1]+w/2],fill=CREAM)
     im=Image.alpha_composite(im,st)
     out=Image.new("RGBA",(M,M),(0,0,0,0)); out.paste(im,(0,0),squircle_mask())
     return out.resize((N,N),Image.LANCZOS)
