@@ -570,3 +570,11 @@ enum ScheduleStore {
         save(all.filter { $0.name != name })
     }
 }
+
+enum InstallLocation {
+    static func shouldOffer(path: String, home: String = NSHomeDirectory()) -> Bool {
+        if path.hasPrefix("/Applications/") { return false }
+        if path.hasPrefix(home + "/Applications/") { return false }
+        return path.hasPrefix("/Volumes/") || path.contains("/Downloads/") || path.contains("/AppTranslocation/")
+    }
+}

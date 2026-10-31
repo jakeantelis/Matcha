@@ -194,6 +194,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Pref.registerDefaults()
+        if MoveToApplications.offerIfNeeded() { return }
         applyDockPolicy()
         buildMainMenu()
 

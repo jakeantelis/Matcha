@@ -33,8 +33,10 @@ Made by [Antelis Labs](https://antelislabs.com). See what's new in [`RELEASE_NOT
 **Most people: three steps, no Terminal.**
 
 1. [Download Matcha.dmg](https://github.com/jakeantelis/Matcha/releases/latest/download/Matcha.dmg) and open it.
-2. In the window that appears, drag **Matcha** onto the **Applications** folder.
-3. Open **Matcha** from your Applications folder. A cup appears in your menu bar. Click it to start.
+2. **Double click Matcha** and choose **Move to Applications**. Or drag **Matcha** onto the **Applications** folder yourself.
+3. Matcha opens with a cup in your menu bar. Click it to start.
+
+<p align="center"><img src="docs/images/installer.png" width="440" alt="The Matcha installer window: double click Matcha, or drag it onto Applications"></p>
 
 If macOS asks whether to open an app from the internet, choose **Open**. Matcha is signed and notarized by Apple. Allow notifications when asked, so Matcha can warn you before a session ends. Keep Matcha in Applications, not on the disk image.
 

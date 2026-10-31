@@ -93,12 +93,20 @@ DMG="$DIST/Matcha.dmg"
 DMG_NOTARIZED=false
 DMG_STAGE=build/dmg
 rm -f "$DMG" "$DMG.sha256"
-rm -rf "$DMG_STAGE"
-mkdir -p "$DMG_STAGE"
-cp -R "$APP" "$DMG_STAGE/Matcha.app"
-ln -s /Applications "$DMG_STAGE/Applications"
-hdiutil create -volname "Matcha" -srcfolder "$DMG_STAGE" -fs HFS+ -format UDZO -ov "$DMG" >/dev/null
-rm -rf "$DMG_STAGE"
+DMGBUILD="${DMGBUILD:-$(ls .build-tools/bin/dmgbuild 2>/dev/null || command -v dmgbuild || true)}"
+if [[ -n "$DMGBUILD" ]] && "$DMGBUILD" -s Tools/dmg/settings.py -D here="$PWD/Tools/dmg" -D app="$APP" -D icon=Resources/AppIcon.icns "Matcha" "$DMG" >/dev/null 2>&1 \
+   && hdiutil verify "$DMG" >/dev/null 2>&1; then
+    echo "DMG built with the polished window."
+else
+    echo "note: using the plain disk image (dmgbuild unavailable or its image did not verify)"
+    rm -f "$DMG"
+    rm -rf "$DMG_STAGE"
+    mkdir -p "$DMG_STAGE"
+    cp -R "$APP" "$DMG_STAGE/Matcha.app"
+    ln -s /Applications "$DMG_STAGE/Applications"
+    hdiutil create -volname "Matcha" -srcfolder "$DMG_STAGE" -fs HFS+ -format UDZO -ov "$DMG" >/dev/null
+    rm -rf "$DMG_STAGE"
+fi
 
 if [[ "$SIGNED" == true ]]; then
     codesign --force --timestamp --sign "$DEV_ID" "$DMG"

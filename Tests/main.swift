@@ -61,5 +61,12 @@ let schedule = Schedule(name: "Build", weekdays: [1, 2, 3, 4, 5], hour: 9, minut
 check("schedule name", schedule.name, "Build")
 check("schedule hour", schedule.hour, 9)
 
+// --- InstallLocation ---
+check("offer from disk image", InstallLocation.shouldOffer(path: "/Volumes/Matcha/Matcha.app", home: "/Users/x"), true)
+check("offer from Downloads", InstallLocation.shouldOffer(path: "/Users/x/Downloads/Matcha.app", home: "/Users/x"), true)
+check("no offer in Applications", InstallLocation.shouldOffer(path: "/Applications/Matcha.app", home: "/Users/x"), false)
+check("no offer in user Applications", InstallLocation.shouldOffer(path: "/Users/x/Applications/Matcha.app", home: "/Users/x"), false)
+check("no offer from build folder", InstallLocation.shouldOffer(path: "/Users/x/src/Matcha/build/Matcha.app", home: "/Users/x"), false)
+
 print(failures == 0 ? "ALL TESTS PASSED" : "\(failures) TEST(S) FAILED")
 exit(failures == 0 ? 0 : 1)
