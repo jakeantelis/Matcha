@@ -639,8 +639,8 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
     private func createStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
-            button.image = symbolImage(["cup.and.saucer.fill", "cup.and.saucer", "leaf.fill", "leaf"])
-            button.contentTintColor = active ? Matcha.green : NSColor.tertiaryLabelColor
+            button.image = MenuBarIcon.cup(steaming: active)
+            button.contentTintColor = active ? Matcha.green : nil
             button.imagePosition = .imageLeading
             button.font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
             button.action = #selector(statusClicked)
@@ -1793,18 +1793,24 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         let endingSoon = active && endDate != nil && endDate!.timeIntervalSinceNow <= 300
 
         let style = UserDefaults.standard.string(forKey: Pref.menuBarStyle) ?? "cup"
-        let names: [String]
+        var cupColor: NSColor?
+        if active {
+            let blink = Int(Date().timeIntervalSince1970) % 2 == 0
+            cupColor = endingSoon ? (blink ? NSColor.systemOrange : Matcha.green.withAlphaComponent(0.4)) : Matcha.green
+        }
         switch style {
         case "leaf":
-            names = active ? ["leaf.fill", "leaf"] : ["leaf"]
+            button.image = symbolImage(active ? ["leaf.fill", "leaf"] : ["leaf"])
         case "dot":
-            names = active ? ["circle.fill", "circle"] : ["circle"]
+            button.image = symbolImage(active ? ["circle.fill", "circle"] : ["circle"])
         default:
-            names = active ? ["cup.and.saucer.fill", "cup.and.saucer", "mug.fill", "mug"] : ["leaf.fill", "leaf", "cup.and.saucer"]
+            button.image = MenuBarIcon.cup(steaming: active, color: cupColor)
         }
-        button.image = symbolImage(names)
 
-        if endingSoon {
+        let usesCup = style != "leaf" && style != "dot"
+        if usesCup {
+            button.contentTintColor = nil
+        } else if endingSoon {
             let blink = Int(Date().timeIntervalSince1970) % 2 == 0
             button.contentTintColor = blink
                 ? NSColor.systemOrange

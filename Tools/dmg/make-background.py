@@ -14,10 +14,10 @@ def make(scale, icon_path):
             px[x, y] = c
     im = base.convert("RGBA")
 
-    cx, cy = w / 2, 74 * scale
+    cx, cy = w / 2, 70 * scale
 
     icon = Image.open(icon_path).convert("RGBA")
-    size = 92 * scale
+    size = 124 * scale
     icon = icon.resize((size, size), Image.LANCZOS)
     shadow = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     shadow.paste((0, 0, 0, 90), (int(cx - size / 2), int(cy - size / 2 + 6 * scale)), icon.split()[3])
