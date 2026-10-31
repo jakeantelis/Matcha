@@ -158,4 +158,4 @@ The cask formula lives in [`Casks/matcha.rb`](Casks/matcha.rb).
 
 [MIT](LICENSE), free to use, fork, and ship.
 
-Built by [Antelis Labs](https://antelislabs.com), native macOS and studio audio tools.
+Built by [Antelis Labs](https://antelislabs.com), native macOS and studio audio tools. Also from us: [Tarn](https://github.com/jakeantelis/Tarn), a focus timer with breathing and sounds.
