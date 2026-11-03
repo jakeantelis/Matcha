@@ -66,8 +66,55 @@ if [[ "$ARCHS" != *arm64* || "$ARCHS" != *x86_64* ]]; then
 fi
 
 # ---- Notarization ----
+#
+# A missing notary credential used to be one "note:" line in a long build log,
+# after which this script happily packaged Matcha.dmg and exited 0. --publish
+# refuses to create a release without notarization, so the public path was
+# never at risk — but the artifact left in dist/ is named exactly like a real
+# release artifact and carries no sign that it is un-notarized, and uploading
+# one by hand goes nowhere near that gate. Gatekeeper rejects it on every Mac
+# but this one.
+#
+# So the two cases are now told apart, which they were not before:
+#
+#   not signed  — a dev build on a machine without the Developer ID cert.
+#                 Notarization was never possible. Still just a note, as before.
+#   signed      — a release build. The cert is right here; a missing credential
+#                 is a setup problem to fix now, not a footnote. Fatal.
 NOTARIZED=false
+HAVE_NOTARY=false
 if [[ "$SIGNED" == true ]] && xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" >/dev/null 2>&1; then
+    HAVE_NOTARY=true
+fi
+
+if [[ "$SIGNED" == true && "$HAVE_NOTARY" != true ]]; then
+    cat >&2 <<MSG
+ERROR: this build is Developer ID signed, which makes it a release build,
+but there is no stored notary credential called
+"$NOTARY_PROFILE"
+so packaging would produce a Matcha.dmg that Gatekeeper rejects on every Mac
+except this one.
+
+  Store it once. Run this exactly as printed — omitting --password makes
+  notarytool prompt for it, so it stays out of your shell history. The password
+  is an app-specific one from appleid.apple.com -> Sign-In and Security ->
+  App-Specific Passwords, not your ordinary Apple ID password:
+
+    xcrun notarytool store-credentials "$NOTARY_PROFILE" --apple-id "jantelis@gmail.com" --team-id "6G8C59T679"
+
+  One profile covers CleanStage, Matcha and Tarn.
+
+  To package a signed-but-un-notarized build on purpose anyway:
+
+    ALLOW_UNNOTARIZED=1 $0
+MSG
+    if [[ "${ALLOW_UNNOTARIZED:-}" != 1 ]]; then
+        exit 1
+    fi
+    echo "warning: ALLOW_UNNOTARIZED=1 — packaging an UN-NOTARIZED build on purpose." >&2
+fi
+
+if [[ "$SIGNED" == true && "$HAVE_NOTARY" == true ]]; then
     mkdir -p "$DIST"
     rm -f "$DIST/Matcha-notary.zip"
     ditto -c -k --norsrc --noextattr --keepParent "$APP" "$DIST/Matcha-notary.zip"
