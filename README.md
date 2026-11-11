@@ -1,13 +1,27 @@
-# Matcha
+<p align="center">
+  <img src="docs/images/icon.png" width="112" alt="Matcha app icon: a matcha cup">
+</p>
 
-**Keep your Mac awake for exports, renders, downloads, and long builds.**
+<h1 align="center">Matcha</h1>
 
-> **100% Free & Open Source (MIT)** · No accounts, no subscriptions, no tracking, and zero bloat. Built natively in Swift for macOS.
+<p align="center">
+  <a href="https://github.com/jakeantelis/Matcha/stargazers"><img src="https://img.shields.io/github/stars/jakeantelis/Matcha?style=flat&label=%E2%98%85&color=2f6f4f" alt="GitHub stars"></a>
+  <a href="https://github.com/jakeantelis/Matcha/releases"><img src="https://img.shields.io/github/v/release/jakeantelis/Matcha?style=flat&color=2f6f4f" alt="Latest release"></a>
+  <a href="https://github.com/jakeantelis/Matcha/releases"><img src="https://img.shields.io/github/downloads/jakeantelis/Matcha/total?style=flat&label=downloads&color=2f6f4f" alt="Total downloads"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/jakeantelis/Matcha?style=flat&color=2f6f4f" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/macOS-11%2B-2f6f4f?style=flat" alt="Requires macOS 11 or newer">
+  <img src="https://img.shields.io/badge/Apple%20silicon%20%7C%20Intel-2f6f4f?style=flat" alt="Universal: Apple silicon and Intel">
+</p>
 
-[![Release](https://img.shields.io/github/v/release/jakeantelis/Matcha)](https://github.com/jakeantelis/Matcha/releases)
-[![License](https://img.shields.io/github/license/jakeantelis/Matcha)](LICENSE)
-[![Platform](https://img.shields.io/badge/macOS-11%2B-2f6f4f)]()
-[![Built with Swift](https://img.shields.io/badge/Swift-AppKit-F05138)]()
+<p align="center">
+  <strong>Keep your Mac awake for exports, renders, downloads, and long builds.</strong><br>
+  Free and open source (MIT). No accounts, no subscriptions, no tracking. Built natively in Swift for macOS.
+</p>
+
+<p align="center">
+  <a href="https://github.com/jakeantelis/Matcha/releases/latest/download/Matcha.dmg"><img src="docs/assets/download-button.svg" width="280" alt="Download Matcha for Mac"></a><br>
+  <sub>Free · macOS 11 or newer · Apple silicon and Intel · <a href="https://github.com/jakeantelis/Matcha/releases">All releases</a></sub>
+</p>
 
 <p align="center">
   <img src="docs/demo.gif" width="420" alt="Matcha toggling from sleep-allowed to awake, the ring fills green and the cup steams">
@@ -18,11 +32,6 @@
 <p align="center"><b>Works with</b> · Claude Code · Cursor · Copilot · Codex · Gemini CLI · Windsurf · <i>and 39 more</i></p>
 
 Matcha is a tiny Mac app that stops your Mac from sleeping or locking while something long is running: an export, a render, a big download, a backup or a build. Click the cup, pick how long, and walk away. When the time is up, it lets go and your Mac goes back to normal.
-
-<p align="center">
-  <a href="https://github.com/jakeantelis/Matcha/releases/latest/download/Matcha.dmg"><b>Download Matcha for Mac</b></a><br>
-  Free. Needs macOS 11 or newer. Works on Apple silicon and Intel.
-</p>
 
 <p align="center"><img src="docs/images/window.png" width="300" alt="The Matcha window: a green ring around a cup, with 2h, 4h, infinity and Custom buttons"></p>
 
