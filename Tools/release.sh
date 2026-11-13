@@ -7,7 +7,7 @@ TMP=build/universal
 DIST=dist
 VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Resources/Info.plist)
 
-DEV_ID="D430FCAFBA0DBC0F48D765E55C07BF3BA1FCEF85"
+DEV_ID="D9004FA688DB0E7975031AEFC0B9C87684B2D05A"   # Developer ID Application: Antelis Labs LLC (6G8C59T679), expires 2027-12-13
 NOTARY_PROFILE="jake-antelis"
 
 rm -rf "$APP" "$TMP"
