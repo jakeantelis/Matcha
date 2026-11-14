@@ -97,7 +97,7 @@ final class PreferencesWindowController: NSObject {
         button.font = NSFont.systemFont(ofSize: 11)
         button.translatesAutoresizingMaskIntoConstraints = false
 
-        let credit = LinkButton(title: "\u{00B7} by Antelis Labs \u{2197}", target: self, action: #selector(openAntelisLabs))
+        let credit = LinkButton(title: "\u{00B7} by AntelisLabs \u{2197}", target: self, action: #selector(openAntelisLabs))
         credit.isBordered = false
         credit.font = NSFont.systemFont(ofSize: 11)
         credit.contentTintColor = .secondaryLabelColor

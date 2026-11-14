@@ -35,7 +35,7 @@ Matcha is a tiny Mac app that stops your Mac from sleeping or locking while some
 
 <p align="center"><img src="docs/images/window.png" width="300" alt="The Matcha window: a green ring around a cup, with 2h, 4h, infinity and Custom buttons"></p>
 
-Made by [Antelis Labs](https://antelislabs.com). See what's new in [`RELEASE_NOTES.md`](RELEASE_NOTES.md).
+Made by [AntelisLabs](https://antelislabs.com). See what's new in [`RELEASE_NOTES.md`](RELEASE_NOTES.md).
 
 ## Install
 
@@ -215,8 +215,8 @@ The cask formula lives in [`Casks/matcha.rb`](Casks/matcha.rb).
 
 [MIT](LICENSE), free to use, fork, and ship.
 
-## More from Antelis Labs
+## More from AntelisLabs
 
-Matcha is made by [Antelis Labs](https://antelislabs.com), which makes native Mac and studio audio tools. See [antelislabs.com](https://antelislabs.com) for everything else.
+Matcha is made by [AntelisLabs](https://antelislabs.com), which makes native Mac and studio audio tools. See [antelislabs.com](https://antelislabs.com) for everything else.
 
 A separate app, if you want it: [**Tarn**](https://github.com/jakeantelis/Tarn) is a calm focus timer with breathing breaks and soft sounds. It is not part of Matcha and does not keep your Mac awake. The two work well side by side: Matcha keeps the Mac awake, Tarn keeps you focused.
