@@ -15,7 +15,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.5.7</string>
+	<string>1.5.8</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -28,15 +28,15 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>14</string>
+	<string>15</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>11.0</string>
 	<key>LSUIElement</key>
 	<false/>
-	<key>NSHumanReadableCopyright</key>
-	<string>© 2026 Antelis Labs LLC</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 Antelis Labs LLC</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>
