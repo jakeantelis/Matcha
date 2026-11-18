@@ -67,5 +67,6 @@ Add a test to `Tests/main.swift` if adding to the built-in list.
 - **Keep changes focused:** read `Sources/` files in targeted chunks (grep first,
   then narrow reads), avoid restating code or history, and prefer
   `git status`/`git diff --stat` over full diffs.
-- No external dependencies, only system frameworks (AppKit, Carbon, IOKit, ServiceManagement, UserNotifications).
+- One external dependency: Sparkle (MIT) for updates, downloaded at build time by `Tools/fetch-sparkle.sh` (pinned version + SHA-256), never committed. Everything else is system frameworks (AppKit, Carbon, IOKit, ServiceManagement, UserNotifications).
+- Updates: Sparkle reads `appcast.xml` on `main`. `Tools/release.sh --publish` signs the zip with the EdDSA key in the login Keychain (account `matcha`), adds it to the feed, commits and pushes. Raise `CFBundleVersion` every release. Losing that key means no more signed updates, so keep a backup of it.
 - Git: `main` branch, squash or linear history, push when tests pass and no release hold is active.

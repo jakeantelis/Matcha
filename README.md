@@ -49,7 +49,7 @@ Made by [AntelisLabs](https://antelislabs.com). See what's new in [`RELEASE_NOTE
 
 If macOS asks whether to open an app from the internet, choose **Open**. Matcha is signed and notarized by Apple. Allow notifications when asked, so Matcha can warn you before a session ends. Keep Matcha in Applications, not on the disk image.
 
-**Updates:** Matcha checks GitHub for a new version about once a day and asks before installing anything. You can also open Settings and press **Check for Updates**.
+**Updates:** Matcha updates through [Sparkle](https://sparkle-project.org). It asks once whether to check for updates automatically; if you say yes, it checks about once a day and shows what is new before installing anything. Checks go to GitHub and send no personal information. Every update is signed, and Matcha checks the signature before installing it. You can also open Settings and press **Check for Updates**.
 
 **Remove it:** quit Matcha and drag it to the Trash. To also remove the settings and the notes it added for coding agents, run `Tools/uninstall.sh` (see below).
 

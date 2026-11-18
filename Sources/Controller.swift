@@ -3,9 +3,9 @@ import Carbon.HIToolbox
 import IOKit.pwr_mgt
 import ServiceManagement
 import UserNotifications
-import CryptoKit
+import Sparkle
 
-final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuItemValidation, UNUserNotificationCenterDelegate {
+final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuItemValidation, UNUserNotificationCenterDelegate, SPUUpdaterDelegate, SPUStandardUserDriverDelegate {
 
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
@@ -241,9 +241,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         }
 
         UserDefaults.standard.set(false, forKey: "updating")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
-            self?.autoUpdateCheck()
-        }
+        updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: self, userDriverDelegate: self)
 
         NotificationCenter.default.addObserver(forName: Notification.Name("MatchaPaletteStop"), object: nil, queue: .main) { [weak self] _ in self?.stop() }
         NotificationCenter.default.addObserver(forName: Notification.Name("MatchaPaletteStatus"), object: nil, queue: .main) { [weak self] _ in
@@ -916,205 +914,26 @@ final class Controller: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMen
         checkAgents()
     }
 
-    private struct ReleaseInfo: Decodable {
-        let tag_name: String
-        let html_url: String
-        let assets: [Asset]
+    // MARK: Updates
+
+    /// Updates come through Sparkle (MIT). On its second launch Matcha asks once whether to check
+    /// automatically; until then, and if the answer is no, it only checks when you choose Check for
+    /// Updates. A check reads appcast.xml from this project on GitHub and sends no profile of the Mac.
+    /// Every update is signed with Matcha's own key, and Sparkle refuses one that does not match.
+    private var updater: SPUStandardUpdaterController?
+
+    @objc func checkForUpdates(_ sender: Any?) {
+        updater?.checkForUpdates(sender)
     }
 
-    private struct Asset: Decodable {
-        let name: String
-        let browser_download_url: String
-    }
-
-    private func fetchLatestRelease(_ completion: @escaping (String?, URL?, URL?, String?) -> Void) {
-        guard let url = URL(string: "https://api.github.com/repos/jakeantelis/Matcha/releases/latest") else {
-            completion(nil, nil, nil, nil)
-            return
-        }
-        var request = URLRequest(url: url)
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        request.timeoutInterval = 10
-        URLSession.shared.dataTask(with: request) { data, _, _ in
-            guard let data, let release = try? JSONDecoder().decode(ReleaseInfo.self, from: data) else {
-                DispatchQueue.main.async { completion(nil, nil, nil, nil) }
-                return
-            }
-            let version = release.tag_name.trimmingCharacters(in: CharacterSet(charactersIn: "vV"))
-            var zipURL: URL?
-            var shaURL: URL?
-            for asset in release.assets {
-                if asset.name == "Matcha.zip" { zipURL = URL(string: asset.browser_download_url) }
-                if asset.name == "Matcha.zip.sha256" { shaURL = URL(string: asset.browser_download_url) }
-            }
-            DispatchQueue.main.async {
-                completion(version, zipURL, shaURL, release.html_url)
-            }
-        }.resume()
-    }
-
-    @objc private func checkForUpdates(_ sender: Any?) {
-        let current = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
-        fetchLatestRelease { [weak self] version, zipURL, shaURL, page in
-            guard let self else { return }
-            NSApp.activate(ignoringOtherApps: true)
-            guard let version, let page else {
-                let alert = NSAlert()
-                alert.messageText = "Couldn't check for updates"
-                alert.informativeText = "Check your connection and try again."
-                alert.addButton(withTitle: "Open Releases")
-                alert.addButton(withTitle: "OK")
-                if alert.runModal() == .alertFirstButtonReturn {
-                    NSWorkspace.shared.open(URL(string: "https://github.com/jakeantelis/Matcha/releases")!)
-                }
-                return
-            }
-            if Self.isVersion(version, newerThan: current) {
-                self.presentUpdate(version: version, zipURL: zipURL, shaURL: shaURL, page: URL(string: page))
-            } else {
-                let alert = NSAlert()
-                alert.messageText = "You're up to date"
-                alert.informativeText = "Matcha \(current) is the latest version."
-                alert.addButton(withTitle: "OK")
-                alert.runModal()
-            }
-        }
-    }
-
-    private func autoUpdateCheck() {
-        let key = "lastUpdateCheck"
-        let defaults = UserDefaults.standard
-        guard Date().timeIntervalSince1970 - defaults.double(forKey: key) > 86400 else { return }
-        defaults.set(Date().timeIntervalSince1970, forKey: key)
-        let current = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
-        fetchLatestRelease { [weak self] version, zipURL, shaURL, page in
-            guard let self, let version, let page, Self.isVersion(version, newerThan: current) else { return }
-            self.presentUpdate(version: version, zipURL: zipURL, shaURL: shaURL, page: URL(string: page))
-        }
-    }
-
-    private func presentUpdate(version: String, zipURL: URL?, shaURL: URL?, page: URL?) {
-        NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert()
-        alert.messageText = "Matcha \(version) is available"
-        let current = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
-        alert.informativeText = "You have \(current). Your current mode and settings are kept."
-        alert.addButton(withTitle: "Install & Restart")
-        if page != nil {
-            alert.addButton(withTitle: "Download")
-            alert.addButton(withTitle: "Later")
-        } else {
-            alert.addButton(withTitle: "Later")
-        }
-        let result = alert.runModal()
-        if result == .alertFirstButtonReturn {
-            installUpdate(zipURL: zipURL, shaURL: shaURL)
-        } else if result == .alertSecondButtonReturn, let page {
-            NSWorkspace.shared.open(page)
-        }
-    }
-
-    private func installUpdate(zipURL: URL?, shaURL: URL?) {
-        guard let zipURL, let shaURL else {
-            let alert = NSAlert()
-            alert.messageText = "Update unavailable"
-            alert.informativeText = "This release is missing its download. Use the installer instead."
-            alert.runModal()
-            return
-        }
+    /// Keep the running session across the restart, as the old updater did.
+    func updaterWillRelaunchApplication(_ updater: SPUUpdater) {
         persistSession()
         UserDefaults.standard.set(true, forKey: "updating")
-
-        DispatchQueue.global(qos: .userInitiated).async {
-            do {
-                let tmp = FileManager.default.temporaryDirectory
-                    .appendingPathComponent("matcha-update-\(UUID().uuidString)")
-                try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
-                let zip = tmp.appendingPathComponent("Matcha.zip")
-                guard let zipData = try? Data(contentsOf: zipURL),
-                      let shaText = try? String(contentsOf: shaURL, encoding: .utf8) else {
-                    throw URLError(.badServerResponse)
-                }
-                try zipData.write(to: zip)
-                let expected = shaText.split(separator: " ").first.map(String.init)?.lowercased() ?? ""
-                let computed = SHA256.hash(data: zipData).map { String(format: "%02x", $0) }.joined()
-                guard !expected.isEmpty, expected == computed else {
-                    throw URLError(.badServerResponse)
-                }
-
-                let ditto = Process()
-                ditto.launchPath = "/usr/bin/ditto"
-                ditto.arguments = ["-x", "-k", zip.path, tmp.path]
-                ditto.launch()
-                ditto.waitUntilExit()
-
-                let newApp = tmp.appendingPathComponent("Matcha.app")
-                guard FileManager.default.fileExists(atPath: newApp.path) else {
-                    throw URLError(.cannotDecodeContentData)
-                }
-
-                let appPath = Bundle.main.bundlePath
-                let script = tmp.appendingPathComponent("install.sh")
-                let scriptText = """
-                #!/bin/sh
-                while pgrep -x Matcha >/dev/null 2>&1; do sleep 0.3; done
-                if [ ! -x "\(newApp.path)/Contents/MacOS/Matcha" ]; then
-                  rm -rf "\(tmp.path)"
-                  exit 1
-                fi
-                backup="\(appPath).matcha-backup"
-                rm -rf "$backup"
-                mv "\(appPath)" "$backup" || { rm -rf "\(tmp.path)"; exit 1; }
-                if ditto "\(newApp.path)" "\(appPath)"; then
-                  xattr -dr com.apple.quarantine "\(appPath)" 2>/dev/null || true
-                  rm -rf "$backup"
-                else
-                  rm -rf "\(appPath)"
-                  mv "$backup" "\(appPath)"
-                  rm -rf "\(tmp.path)"
-                  exit 1
-                fi
-                rm -rf "\(tmp.path)"
-                sleep 0.5
-                open "\(appPath)"
-                """
-                try scriptText.write(to: script, atomically: true, encoding: .utf8)
-
-                let chmod = Process()
-                chmod.launchPath = "/bin/chmod"
-                chmod.arguments = ["+x", script.path]
-                chmod.launch()
-                chmod.waitUntilExit()
-
-                DispatchQueue.main.async {
-                    let launcher = Process()
-                    launcher.launchPath = "/bin/sh"
-                    launcher.arguments = ["-c", "nohup \"\(script.path)\" >/dev/null 2>&1 &"]
-                    launcher.launch()
-                    NSApp.terminate(nil)
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    UserDefaults.standard.set(false, forKey: "updating")
-                    let alert = NSAlert()
-                    alert.messageText = "Update failed"
-                    alert.informativeText = "Your session is untouched. You can update by running the install command instead."
-                    alert.runModal()
-                }
-            }
-        }
     }
 
-    private static func isVersion(_ candidate: String, newerThan current: String) -> Bool {
-        let a = candidate.split(separator: ".").map { Int($0.prefix(while: { $0.isNumber })) ?? 0 }
-        let b = current.split(separator: ".").map { Int($0.prefix(while: { $0.isNumber })) ?? 0 }
-        for index in 0..<max(a.count, b.count) {
-            let left = index < a.count ? a[index] : 0
-            let right = index < b.count ? b[index] : 0
-            if left != right { return left > right }
-        }
-        return false
-    }
+    /// Matcha lives in the menu bar, so a scheduled update is shown without taking focus.
+    var supportsGentleScheduledUpdateReminders: Bool { true }
 
     private func timeItem(_ title: String, seconds: TimeInterval) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: #selector(addTime(_:)), keyEquivalent: "")

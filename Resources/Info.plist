@@ -15,7 +15,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.5.8</string>
+	<string>1.5.9</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -28,7 +28,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>15</string>
+	<string>16</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>11.0</string>
 	<key>LSUIElement</key>
@@ -39,5 +39,13 @@
 	<string>© 2026 Antelis Labs LLC</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>SUEnableSystemProfiling</key>
+	<false/>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/jakeantelis/Matcha/main/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>cjgJDnmU/TJbbbqFvwrf2UEDzzgZfYbpLBoL9ArbsEA=</string>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 </dict>
 </plist>

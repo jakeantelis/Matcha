@@ -9,6 +9,8 @@ cask "matcha" do
 
   depends_on :macos
 
+  auto_updates true
+
   app "Matcha.app"
 
   zap trash: [

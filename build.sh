@@ -9,6 +9,8 @@ mode="${1:-build}"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 
+SPARKLE=$(Tools/fetch-sparkle.sh)
+
 echo "Compiling..."
 swiftc -O Sources/*.swift \
     -o "$APP/Contents/MacOS/Matcha" \
@@ -16,7 +18,9 @@ swiftc -O Sources/*.swift \
     -framework Carbon \
     -framework IOKit \
     -framework ServiceManagement \
-    -framework UserNotifications
+    -framework UserNotifications \
+    -F "$SPARKLE" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks
+
 
 mkdir -p "$APP/Contents/Resources"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
@@ -29,10 +33,11 @@ chmod +x "$APP/Contents/Resources/matcha" 2>/dev/null || true
 cp Tools/matchactl "$APP/Contents/Resources/matchactl"
     chmod +x "$APP/Contents/Resources/matchactl"
 fi
+date "+%Y-%m-%d %H:%M:%S" > "$APP/Contents/Resources/BUILD_STAMP"
+Tools/embed-sparkle.sh "$SPARKLE" "$APP" -   # Sparkle is signed first, the app last
 if ! codesign --force --sign - "$APP" 2>&1; then
     echo "warning: codesign failed, continuing (ad-hoc signature)" >&2
 fi
-date "+%Y-%m-%d %H:%M:%S" > "$APP/Contents/Resources/BUILD_STAMP"
 echo "Built $APP"
 
 if [[ "$mode" == "package" || "$mode" == "install" ]]; then
