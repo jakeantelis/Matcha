@@ -44,7 +44,7 @@ Add a test to `Tests/main.swift` if adding to the built-in list.
 
 ## Release
 
-- 1.5.8 is published (first release signed under Antelis Labs LLC).
+- 1.5.9 is published (first release with Sparkle updates; 1.5.8 was the first signed under Antelis Labs LLC).
 - `Tools/release.sh`, build universal binary, sign with the verified Apple
   Developer ID certificate, notarize, staple, and zip. It refuses `--publish`
   unless signing and notarization both succeed.
