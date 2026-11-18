@@ -5,5 +5,14 @@
     <link>https://github.com/jakeantelis/Matcha</link>
     <description>Updates for Matcha, a keep awake timer for builds, exports, and AI coding agents.</description>
     <language>en</language>
+    <item>
+      <title>Matcha 1.5.9</title>
+      <pubDate>Wed, 18 Nov 2026 03:08:46 +0000</pubDate>
+      <sparkle:version>16</sparkle:version>
+      <sparkle:shortVersionString>1.5.9</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>11.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<p>Updates are now signed, and you choose whether they happen on their own.</p><ul><li>Matcha now updates through Sparkle. It asks once whether to check for updates automatically, then checks about once a day and shows what is new before installing. You can still choose Check for Updates at any time.</li><li>Every update is signed with Matcha&#x27;s own key, and Matcha checks the signature before installing it. Checks go to GitHub and send no personal information.</li><li>A running session carries on across an update, as before.</li></ul><p>_Install and uninstall instructions live in the [README](https://github.com/jakeantelis/Matcha#install)._</p>]]></description>
+      <enclosure url="https://github.com/jakeantelis/Matcha/releases/download/v1.5.9/Matcha.zip" sparkle:edSignature="PXhm7U9kXrTQoHZepnL9D/tqYix1ZgcSdplAT47W4I+JCQr8/dFfgSL/OuCjrCGMvPCor56wnuQO4TfH9PGbCg==" length="2035501" type="application/octet-stream"/>
+    </item>
   </channel>
 </rss>
