@@ -27,6 +27,8 @@
   <img src="docs/demo.gif" width="420" alt="Matcha toggling from sleep-allowed to awake, the ring fills green and the cup steams">
 </p>
 
+<p align="center"><a href="docs/assets/matcha-reel.mp4">▶ Watch the 20-second reel</a> <sub>(sound on)</sub></p>
+
 <p align="center"><b>Great for</b> · audio &amp; video exports · renders · big downloads · backups · long builds</p>
 
 <p align="center"><b>Works with</b> · Claude Code · Cursor · Copilot · Codex · Gemini CLI · Windsurf · <i>and 39 more</i></p>
